@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shift-Sight</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS/xlsx library for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Use the Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Deep-space navy */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: pan 90s linear infinite;
+        }
+        
+        /* Atmospheric Background Animation */
+        @keyframes pan {
+            from { background-position: 0 0; }
+            to { background-position: -400px -400px; }
+        }
+
+        /* Critical Pulse Animation */
+        @keyframes pulse-red {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+            }
+            70% {
+                box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+            }
+        }
+        .pulse-critical {
+            animation: pulse-red 2s infinite;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        #table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        #table-container::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        #table-container::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+        #table-container::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Styles for active and inactive tabs */
+        .tab-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-btn.active {
+            border-color: #3b82f6; /* Bright Blue */
+            color: #3b82f6;
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #22d3ee, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-300 flex flex-col min-h-screen">
+
+    <main class="flex-grow flex items-center justify-center p-4">
+        <!-- Homepage View -->
+        <div id="homepage-view" class="text-center max-w-2xl w-full">
+            <h1 class="text-6xl font-black tracking-tight gradient-text mb-2">SHIFT-SIGHT</h1>
+            <p class="text-slate-400 text-lg mb-10">Analyze Roster Insights. Export Shift Data.</p>
+            
+            <div id="drop-zone" class="bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-2xl p-10 cursor-pointer hover:border-blue-500 hover:bg-slate-800 transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <h2 class="mt-4 text-xl font-semibold text-slate-200">Upload Roster Data</h2>
+                <p class="mt-1 text-sm text-slate-500">Drag & drop or click to select a .xlsx file</p>
+                <input id="file-upload" type="file" accept=".xlsx, .xls" class="hidden"/>
+            </div>
+             <p id="homepage-error" class="text-red-400 text-sm mt-4"></p>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="hidden max-w-7xl w-full mx-auto bg-slate-900/70 backdrop-blur-sm rounded-2xl shadow-2xl shadow-blue-500/5 border border-slate-700 p-6 sm:p-8">
+            <div class="border-b border-slate-700 pb-4 mb-6">
+                <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-bold text-slate-100 gradient-text">Shift-Sight</h1>
+                <p class="text-slate-400 mt-2">Roster loaded. Filter and export as needed.</p>
+            </div>
+
+            <!-- Legend Section -->
+            <div id="legend" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg">
+                 <h3 class="text-lg font-semibold mb-3 text-slate-200">Legend</h3>
+                 <div class="flex flex-wrap gap-3 items-center">
+                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-blue-500/20 text-blue-300">Shift A (07:00 - 16:00)</span>
+                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-green-500/20 text-green-300">Shift B (13:00 - 22:00)</span>
+                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-amber-500/20 text-amber-300">Shift C (22:00 - 07:00)</span>
+                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-slate-700 text-slate-300">W/OFF</span>
+                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-red-500/20 text-red-300">Absent / N/A</span>
+                 </div>
+            </div>
+
+            <!-- Tabs Section -->
+            <div id="tabs-section" class="hidden mb-4 border-b border-slate-700">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button id="all-tab" data-view="all" class="tab-btn active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">All Employees</button>
+                    <button id="male-tab" data-view="male" class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">Male MPs</button>
+                    <button id="female-tab" data-view="female" class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">Female MPs</button>
+                </nav>
+            </div>
+
+            <!-- Date Filter and Export Section -->
+            <div id="controls-section" class="hidden my-4 p-4 bg-slate-800/50 rounded-lg">
+                <div class="flex flex-col sm:flex-row items-center gap-4 w-full">
+                    <h3 class="text-md font-semibold text-slate-200 whitespace-nowrap">Filter by Date:</h3>
+                    <div class="flex items-center gap-2">
+                        <label for="start-date-select" class="text-sm font-medium">From:</label>
+                        <select id="start-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="end-date-select" class="text-sm font-medium">To:</label>
+                        <select id="end-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div class="flex items-center gap-2 sm:ml-auto">
+                        <button id="filter-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-500 transition-colors duration-200 shadow-lg shadow-blue-500/20">Filter</button>
+                        <button id="reset-btn" class="bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors duration-200">Reset</button>
+                        <button id="export-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-500 transition-colors duration-200 shadow-lg shadow-green-500/20">Export Roster</button>
+                    </div>
+                </div>
+                <p id="filter-error" class="text-red-400 text-sm mt-2 text-center w-full"></p>
+            </div>
+
+            <!-- Data Visualization Table -->
+            <div id="table-container" class="overflow-x-auto rounded-lg border border-slate-700">
+                <div id="placeholder" class="text-center text-slate-500 py-20">
+                     <div class="text-center text-slate-400 py-20">Processing file...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center p-4 text-xs text-slate-500">
+        Designed & Crafted by Rh. | ⚡️ Team Sonic - Hubli (for internal use only)
+    </footer>
+
+    <script>
+        const homepageView = document.getElementById('homepage-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const fileUpload = document.getElementById('file-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const homepageError = document.getElementById('homepage-error');
+
+        const tableContainer = document.getElementById('table-container');
+        const placeholder = document.getElementById('placeholder');
+        const legend = document.getElementById('legend');
+        
+        const tabsSection = document.getElementById('tabs-section');
+        const allTab = document.getElementById('all-tab');
+        const maleTab = document.getElementById('male-tab');
+        const femaleTab = document.getElementById('female-tab');
+
+        const controlsSection = document.getElementById('controls-section');
+        const startDateSelect = document.getElementById('start-date-select');
+        const endDateSelect = document.getElementById('end-date-select');
+        const filterBtn = document.getElementById('filter-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const filterError = document.getElementById('filter-error');
+
+        let fullRosterData = { all: [], male: [], female: [], headers: [] };
+        let currentView = 'all';
+
+        // --- Homepage File Upload Logic ---
+        dropZone.addEventListener('click', () => fileUpload.click());
+        fileUpload.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('border-blue-500', 'bg-slate-800'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-blue-500', 'bg-slate-800'), false);
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            handleFile(file);
+        }, false);
+
+
+        function handleFile(file) {
+            if (!file) return;
+            homepageError.textContent = '';
+            
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                homepageError.textContent = 'Invalid file type. Please upload a .xlsx or .xls file.';
+                return;
+            }
+
+            homepageView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    processWorkbook(workbook);
+                } catch (err) {
+                    console.error("Error processing workbook:", err);
+                    showError('Could not process the Excel file. It might be corrupted or in an unsupported format.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // --- Dashboard Logic ---
+        filterBtn.addEventListener('click', applyDateFilter);
+        resetBtn.addEventListener('click', resetDateFilter);
+        exportBtn.addEventListener('click', exportRosterToCSV);
+
+        [allTab, maleTab, femaleTab].forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                switchTabView(e.currentTarget.dataset.view);
+            });
+        });
+
+        const nameSorter = (a, b) => (a['Employee Name'] || '').localeCompare(b['Employee Name'] || '');
+        
+        function processWorkbook(workbook) {
+            let dateHeaders = new Set(); 
+
+            const processSheet = (sheetName, source) => {
+                if (!workbook.Sheets[sheetName]) {
+                    console.warn(`Sheet "${sheetName}" not found in the workbook.`);
+                    return [];
+                }
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: 1, defval: "" });
+
+                jsonData.forEach(row => {
+                    Object.keys(row).forEach(key => {
+                        const isStandardColumn = ['Employee Name', 'Emp Id', 'Designation'].includes(key);
+                        const hasDigits = /\d/.test(key);
+                        const hasLetters = /[a-zA-Z]/.test(key);
+                        if (!isStandardColumn && hasDigits && hasLetters) {
+                            dateHeaders.add(key);
+                        }
+                    });
+                    row._source = source;
+                });
+                return jsonData.filter(row => row['Employee Name'] || row['Emp Id']);
+            };
+
+            const rawMaleData = processSheet('Male MP', 'male');
+            const rawFemaleData = processSheet('Female MP', 'female');
+            const combinedRawData = [...rawMaleData, ...rawFemaleData];
+            
+            // New logic to filter for current and future dates
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to the beginning of the day for accurate comparison
+
+            const allParsedHeaders = Array.from(dateHeaders).map(header => {
+                // Assuming year is 2025 as specified
+                const date = new Date(`${header} 2025`);
+                return { header, date };
+            }).filter(item => !isNaN(item.date.getTime())); // Filter out any invalid dates that couldn't be parsed
+
+            // Sort dates chronologically before filtering
+            allParsedHeaders.sort((a, b) => a.date - b.date);
+
+            // Filter out past dates
+            const futureHeaders = allParsedHeaders.filter(item => item.date >= today).map(item => item.header);
+            
+            const finalDateHeaders = futureHeaders;
+
+            const employeeMap = new Map();
+            combinedRawData.forEach(row => {
+                const empId = row['Emp Id'];
+                if (!empId) return;
+
+                const score = finalDateHeaders.reduce((acc, header) => {
+                    const shift = (row[header] || '').toString().trim().toUpperCase();
+                    return (shift && shift !== 'N/A') ? acc + 1 : acc;
+                }, 0);
+
+                const existingEntry = employeeMap.get(empId);
+                
+                if (!existingEntry || score > existingEntry.score) {
+                    employeeMap.set(empId, { row: row, score: score });
+                }
+            });
+
+            const deduplicatedData = Array.from(employeeMap.values()).map(entry => entry.row);
+            
+            const allDataSorted = deduplicatedData.sort(nameSorter);
+            const maleDataSorted = allDataSorted.filter(row => row._source === 'male');
+            const femaleDataSorted = allDataSorted.filter(row => row._source === 'female');
+            
+            fullRosterData = {
+                all: allDataSorted,
+                male: maleDataSorted,
+                female: femaleDataSorted,
+                headers: finalDateHeaders
+            };
+
+            if (allDataSorted.length > 0) {
+                document.getElementById('dashboard-title').innerHTML = `Shift-Sight <span class="text-slate-400 font-medium text-xl">(${allDataSorted.length} Employees)</span>`;
+                
+                populateDateFilters(fullRosterData.headers);
+                switchTabView('all');
+                
+                [legend, controlsSection, tabsSection].forEach(el => el.classList.remove('hidden'));
+            } else {
+                showError('No valid data found in "Male MP" or "Female MP" sheets. Please check the file format and ensure headers are in the second row.');
+            }
+        }
+        
+        function switchTabView(view) {
+            currentView = view;
+            
+            [allTab, maleTab, femaleTab].forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.view === view);
+            });
+            
+            resetDateFilter();
+        }
+
+        function getShiftInfo(shiftValue) {
+            const value = String(shiftValue).trim().toUpperCase();
+            switch (value) {
+                case 'A': return { class: 'bg-blue-500/20 text-blue-300', text: 'A' };
+                case 'B': return { class: 'bg-green-500/20 text-green-300', text: 'B' };
+                case 'C': return { class: 'bg-amber-500/20 text-amber-300', text: 'C' };
+                case 'W/OFF': case 'WOFF': case 'W-OFF': return { class: 'bg-slate-700 text-slate-300', text: 'W/OFF' };
+                case '': return { class: 'bg-red-500/20 text-red-300 pulse-critical', text: 'N/A' };
+                default: return { class: 'bg-yellow-500/20 text-yellow-300', text: shiftValue };
+            }
+        }
+
+        function renderTable(headers, data) {
+            if (!data || data.length === 0) {
+                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view.</div>`;
+                 return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-slate-700">
+                    <thead class="bg-slate-800">
+                        <tr>
+                            <th scope="col" class="sticky left-0 bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-16 border-r border-slate-700">S.No.</th>
+                            <th scope="col" class="sticky left-16 bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-48 border-r border-slate-700">Employee Name</th>
+                            <th scope="col" class="sticky left-[16rem] bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-32 border-r border-slate-700">Emp Id</th>`;
+            headers.forEach(header => {
+                tableHTML += `<th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">${header}</th>`;
+            });
+            tableHTML += `</tr></thead><tbody class="bg-slate-900 divide-y divide-slate-800">`;
+            
+            data.forEach((row, index) => {
+                tableHTML += `<tr class="group hover:bg-slate-800 transition-colors duration-150">
+                                <td class="sticky left-0 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm text-slate-400 border-r border-slate-700">${index + 1}</td>
+                                <td class="sticky left-16 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-200 border-r border-slate-700">${row['Employee Name'] || 'N/A'}</td>
+                                <td class="sticky left-[16rem] bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm text-slate-400 border-r border-slate-700">${row['Emp Id'] || 'N/A'}</td>`;
+                headers.forEach(header => {
+                    const shiftInfo = getShiftInfo(row[header] || '');
+                    tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold ${shiftInfo.class}">${shiftInfo.text}</td>`;
+                });
+                tableHTML += `</tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        function showError(message) {
+            tableContainer.innerHTML = `<div class="text-center text-red-400 py-20 px-4">${message}</div>`;
+        }
+        
+        function populateDateFilters(dateHeaders) {
+            startDateSelect.innerHTML = '';
+            endDateSelect.innerHTML = '';
+            dateHeaders.forEach(date => {
+                const option1 = document.createElement('option');
+                option1.value = date;
+                option1.textContent = date;
+                startDateSelect.appendChild(option1);
+                const option2 = document.createElement('option');
+                option2.value = date;
+                option2.textContent = date;
+                endDateSelect.appendChild(option2);
+            });
+            if (endDateSelect.options.length > 0) {
+                endDateSelect.selectedIndex = endDateSelect.options.length - 1;
+            }
+        }
+
+        function applyDateFilter() {
+            filterError.textContent = ''; 
+            const startDate = startDateSelect.value;
+            const endDate = endDateSelect.value;
+            const allHeaders = fullRosterData.headers;
+            const startIndex = allHeaders.indexOf(startDate);
+            const endIndex = allHeaders.indexOf(endDate);
+            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+                filterError.textContent = "Invalid date range. 'From' date cannot be after 'To' date.";
+                return;
+            }
+            const filteredHeaders = allHeaders.slice(startIndex, endIndex + 1);
+            renderTable(filteredHeaders, fullRosterData[currentView]);
+        }
+
+        function resetDateFilter() {
+            filterError.textContent = '';
+            startDateSelect.selectedIndex = 0;
+            if (endDateSelect.options.length > 0) {
+                endDateSelect.selectedIndex = endDateSelect.options.length - 1;
+            }
+            renderTable(fullRosterData.headers, fullRosterData[currentView]);
+        }
+
+        function exportRosterToCSV() {
+            const startDate = startDateSelect.value;
+            const endDate = endDateSelect.value;
+            const allHeaders = fullRosterData.headers;
+            const startIndex = allHeaders.indexOf(startDate);
+            const endIndex = allHeaders.indexOf(endDate);
+
+            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+                filterError.textContent = "Cannot export, invalid date range selected.";
+                return;
+            }
+            filterError.textContent = "";
+
+            const headersToExport = allHeaders.slice(startIndex, endIndex + 1);
+            const dataToExport = fullRosterData[currentView];
+
+            const shiftMap = {
+                'A': '07:00 - 16:00',
+                'B': '13:00 - 22:00',
+                'C': '22:00 - 07:00',
+                'W/OFF': 'W/OFF',
+                'WOFF': 'W/OFF',
+                'W-OFF': 'W/OFF'
+            };
+
+            const getFormattedDate = (header) => {
+                const date = new Date(`${header} 2025`);
+                if (isNaN(date.getTime())) { return header; }
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = date.toLocaleString('en-GB', { month: 'short' });
+                const year = date.getFullYear().toString().slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            const csvRows = [['Username', 'Shift Name', 'From', 'To']];
+
+            dataToExport.forEach(row => {
+                const empId = row['Emp Id'];
+                if (!empId) return;
+
+                let currentShift = null;
+                let shiftStartDate = null;
+
+                headersToExport.forEach((header, index) => {
+                    const shiftValue = (row[header] || '').toString().trim().toUpperCase();
+
+                    if (currentShift !== shiftValue) {
+                        if (currentShift && shiftMap.hasOwnProperty(currentShift)) {
+                            const shiftName = shiftMap[currentShift];
+                            const formattedStartDate = getFormattedDate(shiftStartDate);
+                            const formattedEndDate = getFormattedDate(headersToExport[index - 1]);
+                            csvRows.push([empId, shiftName, formattedStartDate, formattedEndDate]);
+                        }
+                        
+                        if (shiftMap.hasOwnProperty(shiftValue)) {
+                            currentShift = shiftValue;
+                            shiftStartDate = header;
+                        } else {
+                            currentShift = null;
+                            shiftStartDate = null;
+                        }
+                    }
+
+                    if (index === headersToExport.length - 1 && currentShift && shiftStartDate) {
+                        const shiftName = shiftMap[currentShift];
+                        const formattedStartDate = getFormattedDate(shiftStartDate);
+                        const formattedEndDate = getFormattedDate(header);
+                        csvRows.push([empId, shiftName, formattedStartDate, formattedEndDate]);
+                    }
+                });
+            });
+
+            const csvString = csvRows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            
+            const link = document.createElement('a');
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'roster_summary.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    </script>
+</body>
+</html>
+
+
