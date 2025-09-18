@@ -43,18 +43,18 @@
         }
 
         /* Custom scrollbar for better aesthetics */
-        #table-container::-webkit-scrollbar {
+        #table-container::-webkit-scrollbar, #shift-a-list::-webkit-scrollbar, #shift-b-list::-webkit-scrollbar, #shift-c-list::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
-        #table-container::-webkit-scrollbar-track {
+        #table-container::-webkit-scrollbar-track, #shift-a-list::-webkit-scrollbar-track, #shift-b-list::-webkit-scrollbar-track, #shift-c-list::-webkit-scrollbar-track {
             background: #0f172a;
         }
-        #table-container::-webkit-scrollbar-thumb {
+        #table-container::-webkit-scrollbar-thumb, #shift-a-list::-webkit-scrollbar-thumb, #shift-b-list::-webkit-scrollbar-thumb, #shift-c-list::-webkit-scrollbar-thumb {
             background: #334155;
             border-radius: 10px;
         }
-        #table-container::-webkit-scrollbar-thumb:hover {
+        #table-container::-webkit-scrollbar-thumb:hover, #shift-a-list::-webkit-scrollbar-thumb:hover, #shift-b-list::-webkit-scrollbar-thumb:hover, #shift-c-list::-webkit-scrollbar-thumb:hover {
             background: #475569;
         }
 
@@ -98,6 +98,38 @@
                 <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-bold text-slate-100 gradient-text">Shift-Sight</h1>
                 <p class="text-slate-400 mt-2">Roster loaded. Filter and export as needed.</p>
             </div>
+            
+            <!-- Today's Shift Dashboard Section -->
+            <div id="todays-shift-dashboard" class="hidden mb-6">
+                <h2 class="text-xl font-bold text-slate-200 mb-4">Today's Roster (<span id="today-date-display"></span>)</h2>
+                <div id="today-roster-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Shift A Card -->
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-blue-500/50 flex flex-col">
+                        <h3 class="font-bold text-lg text-blue-300 mb-2">Shift A (07:00 - 16:00)</h3>
+                        <div id="shift-a-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
+                        <ul id="shift-a-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
+                            <li class="text-slate-500">No employees scheduled.</li>
+                        </ul>
+                    </div>
+                    <!-- Shift B Card -->
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-green-500/50 flex flex-col">
+                         <h3 class="font-bold text-lg text-green-300 mb-2">Shift B (13:00 - 22:00)</h3>
+                         <div id="shift-b-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
+                        <ul id="shift-b-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
+                             <li class="text-slate-500">No employees scheduled.</li>
+                        </ul>
+                    </div>
+                    <!-- Shift C Card -->
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-amber-500/50 flex flex-col">
+                         <h3 class="font-bold text-lg text-amber-300 mb-2">Shift C (22:00 - 07:00)</h3>
+                         <div id="shift-c-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
+                        <ul id="shift-c-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
+                            <li class="text-slate-500">No employees scheduled.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- Legend Section -->
             <div id="legend" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg">
@@ -177,6 +209,18 @@
         const resetBtn = document.getElementById('reset-btn');
         const exportBtn = document.getElementById('export-btn');
         const filterError = document.getElementById('filter-error');
+
+        // Today's Dashboard elements
+        const todaysDashboard = document.getElementById('todays-shift-dashboard');
+        const todayRosterContent = document.getElementById('today-roster-content');
+        const todayDateDisplay = document.getElementById('today-date-display');
+        const shiftASummary = document.getElementById('shift-a-summary');
+        const shiftBSummary = document.getElementById('shift-b-summary');
+        const shiftCSummary = document.getElementById('shift-c-summary');
+        const shiftAList = document.getElementById('shift-a-list');
+        const shiftBList = document.getElementById('shift-b-list');
+        const shiftCList = document.getElementById('shift-c-list');
+
 
         let fullRosterData = { all: [], male: [], female: [], headers: [] };
         let currentView = 'all';
@@ -277,23 +321,19 @@
             const rawFemaleData = processSheet('Female MP', 'female');
             const combinedRawData = [...rawMaleData, ...rawFemaleData];
             
-            // New logic to filter for current and future dates
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to the beginning of the day for accurate comparison
+            today.setHours(0, 0, 0, 0);
 
             const allParsedHeaders = Array.from(dateHeaders).map(header => {
-                // Assuming year is 2025 as specified
                 const date = new Date(`${header} 2025`);
                 return { header, date };
-            }).filter(item => !isNaN(item.date.getTime())); // Filter out any invalid dates that couldn't be parsed
+            }).filter(item => !isNaN(item.date.getTime()));
 
-            // Sort dates chronologically before filtering
             allParsedHeaders.sort((a, b) => a.date - b.date);
 
-            // Filter out past dates
             const futureHeaders = allParsedHeaders.filter(item => item.date >= today).map(item => item.header);
             
-            const finalDateHeaders = futureHeaders;
+            const finalDateHeaders = futureHeaders.length > 0 ? futureHeaders : allParsedHeaders.map(item => item.header);
 
             const employeeMap = new Map();
             combinedRawData.forEach(row => {
@@ -328,6 +368,7 @@
             if (allDataSorted.length > 0) {
                 document.getElementById('dashboard-title').innerHTML = `Shift-Sight <span class="text-slate-400 font-medium text-xl">(${allDataSorted.length} Employees)</span>`;
                 
+                renderTodaysDashboard(fullRosterData.all, Array.from(dateHeaders));
                 populateDateFilters(fullRosterData.headers);
                 switchTabView('all');
                 
@@ -335,6 +376,93 @@
             } else {
                 showError('No valid data found in "Male MP" or "Female MP" sheets. Please check the file format and ensure headers are in the second row.');
             }
+        }
+
+        function renderTodaysDashboard(allData, allFileHeaders) {
+            const today = new Date();
+            const day = today.getDate();
+            
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[today.getMonth()];
+
+            const todayHeaderGenerated = `${day}-${month}`;
+            
+            todayDateDisplay.textContent = today.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const todayHeaderInFile = allFileHeaders.find(h => h.toUpperCase() === todayHeaderGenerated.toUpperCase());
+
+            if (!todayHeaderInFile) {
+                todayRosterContent.innerHTML = `<p class="text-slate-400 text-center col-span-3 py-8">No roster data is available for today (${todayHeaderGenerated}).</p>`;
+                todaysDashboard.classList.remove('hidden');
+                return;
+            }
+
+            const shifts = {
+                A: { males: [], females: [] },
+                B: { males: [], females: [] },
+                C: { males: [], females: [] }
+            };
+
+            allData.forEach(employee => {
+                const shift = (employee[todayHeaderInFile] || '').toUpperCase();
+                if (shifts.hasOwnProperty(shift)) {
+                    if (employee._source === 'male') {
+                        shifts[shift].males.push(employee);
+                    } else if (employee._source === 'female') {
+                        shifts[shift].females.push(employee);
+                    }
+                }
+            });
+            
+            const updateShiftCard = (shift, summaryEl, listEl) => {
+                const maleCount = shifts[shift].males.length;
+                const femaleCount = shifts[shift].females.length;
+                const totalCount = maleCount + femaleCount;
+
+                summaryEl.innerHTML = `Scheduled: <span class="font-bold text-slate-200">${totalCount}</span> (M: ${maleCount}, F: ${femaleCount})`;
+
+                listEl.innerHTML = '';
+                if (totalCount > 0) {
+                    if (maleCount > 0) {
+                        const maleHeader = document.createElement('li');
+                        maleHeader.className = 'text-slate-400 font-semibold text-xs uppercase pt-2 pb-1';
+                        maleHeader.textContent = 'Males';
+                        listEl.appendChild(maleHeader);
+                        shifts[shift].males.forEach(emp => {
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center bg-slate-700/30 p-2 rounded-md';
+                            li.innerHTML = `
+                                <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
+                                <span class="text-slate-500 font-mono text-xs">${emp['Emp Id']}</span>
+                            `;
+                            listEl.appendChild(li);
+                        });
+                    }
+                    if (femaleCount > 0) {
+                        const femaleHeader = document.createElement('li');
+                        femaleHeader.className = 'text-slate-400 font-semibold text-xs uppercase pt-2 pb-1';
+                        femaleHeader.textContent = 'Females';
+                        listEl.appendChild(femaleHeader);
+                         shifts[shift].females.forEach(emp => {
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center bg-slate-700/30 p-2 rounded-md';
+                            li.innerHTML = `
+                                <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
+                                <span class="text-slate-500 font-mono text-xs">${emp['Emp Id']}</span>
+                            `;
+                            listEl.appendChild(li);
+                        });
+                    }
+                } else {
+                    listEl.innerHTML = `<li class="text-slate-500">No employees scheduled.</li>`;
+                }
+            };
+            
+            updateShiftCard('A', shiftASummary, shiftAList);
+            updateShiftCard('B', shiftBSummary, shiftBList);
+            updateShiftCard('C', shiftCSummary, shiftCList);
+
+            todaysDashboard.classList.remove('hidden');
         }
         
         function switchTabView(view) {
@@ -466,8 +594,9 @@
             const getFormattedDate = (header) => {
                 const date = new Date(`${header} 2025`);
                 if (isNaN(date.getTime())) { return header; }
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = date.toLocaleString('en-GB', { month: 'short' });
+                const day = String(date.getDate());
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const month = monthNames[date.getMonth()];
                 const year = date.getFullYear().toString().slice(-2);
                 return `${day}-${month}-${year}`;
             };
@@ -527,5 +656,4 @@
     </script>
 </body>
 </html>
-
 
