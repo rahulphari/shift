@@ -43,18 +43,18 @@
         }
 
         /* Custom scrollbar for better aesthetics */
-        #table-container::-webkit-scrollbar, #shift-a-list::-webkit-scrollbar, #shift-b-list::-webkit-scrollbar, #shift-c-list::-webkit-scrollbar {
+        #table-container::-webkit-scrollbar, #modal-content::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
-        #table-container::-webkit-scrollbar-track, #shift-a-list::-webkit-scrollbar-track, #shift-b-list::-webkit-scrollbar-track, #shift-c-list::-webkit-scrollbar-track {
+        #table-container::-webkit-scrollbar-track, #modal-content::-webkit-scrollbar-track {
             background: #0f172a;
         }
-        #table-container::-webkit-scrollbar-thumb, #shift-a-list::-webkit-scrollbar-thumb, #shift-b-list::-webkit-scrollbar-thumb, #shift-c-list::-webkit-scrollbar-thumb {
+        #table-container::-webkit-scrollbar-thumb, #modal-content::-webkit-scrollbar-thumb {
             background: #334155;
             border-radius: 10px;
         }
-        #table-container::-webkit-scrollbar-thumb:hover, #shift-a-list::-webkit-scrollbar-thumb:hover, #shift-b-list::-webkit-scrollbar-thumb:hover, #shift-c-list::-webkit-scrollbar-thumb:hover {
+        #table-container::-webkit-scrollbar-thumb:hover, #modal-content::-webkit-scrollbar-thumb:hover {
             background: #475569;
         }
 
@@ -71,6 +71,31 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .dashboard-filter-btn {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .dashboard-filter-btn:hover {
+            text-decoration: underline;
+            color: #60a5fa; /* A lighter blue for hover */
+        }
+        
+        /* Modal Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-animated {
+            animation: fadeIn 0.2s ease-out;
+        }
+        .modal-panel-animated {
+            animation: scaleIn 0.2s ease-out;
+        }
+
     </style>
 </head>
 <body class="text-slate-300 flex flex-col min-h-screen">
@@ -99,33 +124,30 @@
                 <p class="text-slate-400 mt-2">Roster loaded. Filter and export as needed.</p>
             </div>
             
-            <!-- Today's Shift Dashboard Section -->
-            <div id="todays-shift-dashboard" class="hidden mb-6">
-                <h2 class="text-xl font-bold text-slate-200 mb-4">Today's Roster (<span id="today-date-display"></span>)</h2>
-                <div id="today-roster-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Roster Dashboard Section -->
+            <div id="roster-dashboard" class="hidden mb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-200">Daily Roster</h2>
+                    <div class="flex items-center gap-2 mt-2 sm:mt-0">
+                        <label for="roster-date-select" class="text-sm font-medium">Select Date:</label>
+                        <select id="roster-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                </div>
+                <div id="roster-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <!-- Shift A Card -->
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-blue-500/50 flex flex-col">
                         <h3 class="font-bold text-lg text-blue-300 mb-2">Shift A (07:00 - 16:00)</h3>
-                        <div id="shift-a-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
-                        <ul id="shift-a-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
-                            <li class="text-slate-500">No employees scheduled.</li>
-                        </ul>
+                        <div id="shift-a-summary" class="text-slate-400 text-sm font-medium"></div>
                     </div>
                     <!-- Shift B Card -->
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-green-500/50 flex flex-col">
                          <h3 class="font-bold text-lg text-green-300 mb-2">Shift B (13:00 - 22:00)</h3>
-                         <div id="shift-b-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
-                        <ul id="shift-b-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
-                             <li class="text-slate-500">No employees scheduled.</li>
-                        </ul>
+                         <div id="shift-b-summary" class="text-slate-400 text-sm font-medium"></div>
                     </div>
                     <!-- Shift C Card -->
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-amber-500/50 flex flex-col">
                          <h3 class="font-bold text-lg text-amber-300 mb-2">Shift C (22:00 - 07:00)</h3>
-                         <div id="shift-c-summary" class="text-slate-400 mb-2 text-sm font-medium">Scheduled: 0</div>
-                        <ul id="shift-c-list" class="flex-grow mt-2 space-y-2 text-sm overflow-y-auto max-h-48 pr-2">
-                            <li class="text-slate-500">No employees scheduled.</li>
-                        </ul>
+                         <div id="shift-c-summary" class="text-slate-400 text-sm font-medium"></div>
                     </div>
                 </div>
             </div>
@@ -186,6 +208,24 @@
         Designed & Crafted by Rh. | ⚡️ Team Sonic - Hubli (for internal use only)
     </footer>
 
+    <!-- Modal for Daily Roster Details -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-animated">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg w-full max-w-lg modal-panel-animated">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700">
+                <h3 id="modal-title" class="text-lg font-bold text-slate-200"></h3>
+                <button id="modal-close-btn" class="text-slate-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="modal-content" class="p-4 max-h-[60vh] overflow-y-auto">
+                <!-- Content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+
     <script>
         const homepageView = document.getElementById('homepage-view');
         const dashboardView = document.getElementById('dashboard-view');
@@ -210,19 +250,19 @@
         const exportBtn = document.getElementById('export-btn');
         const filterError = document.getElementById('filter-error');
 
-        // Today's Dashboard elements
-        const todaysDashboard = document.getElementById('todays-shift-dashboard');
-        const todayRosterContent = document.getElementById('today-roster-content');
-        const todayDateDisplay = document.getElementById('today-date-display');
-        const shiftASummary = document.getElementById('shift-a-summary');
-        const shiftBSummary = document.getElementById('shift-b-summary');
-        const shiftCSummary = document.getElementById('shift-c-summary');
-        const shiftAList = document.getElementById('shift-a-list');
-        const shiftBList = document.getElementById('shift-b-list');
-        const shiftCList = document.getElementById('shift-c-list');
+        // Roster Dashboard elements
+        const rosterDashboard = document.getElementById('roster-dashboard');
+        const rosterContent = document.getElementById('roster-content');
+        const rosterDateSelect = document.getElementById('roster-date-select');
 
+        // Modal elements
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        let fullRosterData = { all: [], male: [], female: [], headers: [] };
+        let fullRosterData = { all: [], male: [], female: [], headers: [], allHeaders: [] };
+        let dailyShiftData = {};
         let currentView = 'all';
 
         // --- Homepage File Upload Logic ---
@@ -281,8 +321,14 @@
         
         // --- Dashboard Logic ---
         filterBtn.addEventListener('click', applyDateFilter);
-        resetBtn.addEventListener('click', resetDateFilter);
+        resetBtn.addEventListener('click', resetFilters);
         exportBtn.addEventListener('click', exportRosterToCSV);
+        rosterDateSelect.addEventListener('change', (e) => renderRosterDashboard(e.target.value));
+        modalCloseBtn.addEventListener('click', hideModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) hideModal();
+        });
+
 
         [allTab, maleTab, femaleTab].forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -321,26 +367,26 @@
             const rawFemaleData = processSheet('Female MP', 'female');
             const combinedRawData = [...rawMaleData, ...rawFemaleData];
             
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             const allParsedHeaders = Array.from(dateHeaders).map(header => {
                 const date = new Date(`${header} 2025`);
                 return { header, date };
             }).filter(item => !isNaN(item.date.getTime()));
 
             allParsedHeaders.sort((a, b) => a.date - b.date);
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             const futureHeaders = allParsedHeaders.filter(item => item.date >= today).map(item => item.header);
-            
-            const finalDateHeaders = futureHeaders.length > 0 ? futureHeaders : allParsedHeaders.map(item => item.header);
+
+            const allHeadersSorted = allParsedHeaders.map(item => item.header);
 
             const employeeMap = new Map();
             combinedRawData.forEach(row => {
                 const empId = row['Emp Id'];
                 if (!empId) return;
 
-                const score = finalDateHeaders.reduce((acc, header) => {
+                const score = allHeadersSorted.reduce((acc, header) => {
                     const shift = (row[header] || '').toString().trim().toUpperCase();
                     return (shift && shift !== 'N/A') ? acc + 1 : acc;
                 }, 0);
@@ -362,117 +408,105 @@
                 all: allDataSorted,
                 male: maleDataSorted,
                 female: femaleDataSorted,
-                headers: finalDateHeaders
+                headers: futureHeaders.length > 0 ? futureHeaders : [], // Only future dates for main table
+                allHeaders: allHeadersSorted // All dates for roster selector
             };
 
             if (allDataSorted.length > 0) {
                 document.getElementById('dashboard-title').innerHTML = `Shift-Sight <span class="text-slate-400 font-medium text-xl">(${allDataSorted.length} Employees)</span>`;
                 
-                renderTodaysDashboard(fullRosterData.all, Array.from(dateHeaders));
+                populateRosterDateSelect();
                 populateDateFilters(fullRosterData.headers);
                 switchTabView('all');
                 
-                [legend, controlsSection, tabsSection].forEach(el => el.classList.remove('hidden'));
+                [legend, controlsSection, tabsSection, rosterDashboard].forEach(el => el.classList.remove('hidden'));
             } else {
                 showError('No valid data found in "Male MP" or "Female MP" sheets. Please check the file format and ensure headers are in the second row.');
             }
         }
 
-        function renderTodaysDashboard(allData, allFileHeaders) {
+        function populateRosterDateSelect() {
+            rosterDateSelect.innerHTML = '';
+            fullRosterData.allHeaders.forEach(header => {
+                const option = document.createElement('option');
+                option.value = header;
+                option.textContent = header;
+                rosterDateSelect.appendChild(option);
+            });
+
             const today = new Date();
             const day = today.getDate();
-            
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const month = monthNames[today.getMonth()];
-
             const todayHeaderGenerated = `${day}-${month}`;
             
-            todayDateDisplay.textContent = today.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const todayOption = Array.from(rosterDateSelect.options).find(opt => opt.value.toUpperCase() === todayHeaderGenerated.toUpperCase());
+            if (todayOption) {
+                rosterDateSelect.value = todayOption.value;
+            } else if (rosterDateSelect.options.length > 0) {
+                 // Fallback to the first available date if today is not found
+                 rosterDateSelect.selectedIndex = 0;
+            }
+            renderRosterDashboard(rosterDateSelect.value);
+        }
 
-            const todayHeaderInFile = allFileHeaders.find(h => h.toUpperCase() === todayHeaderGenerated.toUpperCase());
+        function renderRosterDashboard(selectedDateHeader) {
+            dailyShiftData = { A: { all: [], males: [], females: [] }, B: { all: [], males: [], females: [] }, C: { all: [], males: [], females: [] } };
 
-            if (!todayHeaderInFile) {
-                todayRosterContent.innerHTML = `<p class="text-slate-400 text-center col-span-3 py-8">No roster data is available for today (${todayHeaderGenerated}).</p>`;
-                todaysDashboard.classList.remove('hidden');
-                return;
+            if (!selectedDateHeader) {
+                 rosterContent.innerHTML = `<p class="text-slate-400 text-center col-span-3 py-8">Please select a date.</p>`;
+                 return;
             }
 
-            const shifts = {
-                A: { males: [], females: [] },
-                B: { males: [], females: [] },
-                C: { males: [], females: [] }
-            };
-
-            allData.forEach(employee => {
-                const shift = (employee[todayHeaderInFile] || '').toUpperCase();
-                if (shifts.hasOwnProperty(shift)) {
+            fullRosterData.all.forEach(employee => {
+                const shift = (employee[selectedDateHeader] || '').toUpperCase();
+                if (dailyShiftData.hasOwnProperty(shift)) {
+                    const shiftGroup = dailyShiftData[shift];
+                    shiftGroup.all.push(employee);
                     if (employee._source === 'male') {
-                        shifts[shift].males.push(employee);
+                        shiftGroup.males.push(employee);
                     } else if (employee._source === 'female') {
-                        shifts[shift].females.push(employee);
+                        shiftGroup.females.push(employee);
                     }
                 }
             });
             
-            const updateShiftCard = (shift, summaryEl, listEl) => {
-                const maleCount = shifts[shift].males.length;
-                const femaleCount = shifts[shift].females.length;
+            const updateShiftCard = (shiftLetter) => {
+                const summaryEl = document.getElementById(`shift-${shiftLetter.toLowerCase()}-summary`);
+                const shiftData = dailyShiftData[shiftLetter];
+                const maleCount = shiftData.males.length;
+                const femaleCount = shiftData.females.length;
                 const totalCount = maleCount + femaleCount;
 
-                summaryEl.innerHTML = `Scheduled: <span class="font-bold text-slate-200">${totalCount}</span> (M: ${maleCount}, F: ${femaleCount})`;
-
-                listEl.innerHTML = '';
-                if (totalCount > 0) {
-                    if (maleCount > 0) {
-                        const maleHeader = document.createElement('li');
-                        maleHeader.className = 'text-slate-400 font-semibold text-xs uppercase pt-2 pb-1';
-                        maleHeader.textContent = 'Males';
-                        listEl.appendChild(maleHeader);
-                        shifts[shift].males.forEach(emp => {
-                            const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center bg-slate-700/30 p-2 rounded-md';
-                            li.innerHTML = `
-                                <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
-                                <span class="text-slate-500 font-mono text-xs">${emp['Emp Id']}</span>
-                            `;
-                            listEl.appendChild(li);
-                        });
-                    }
-                    if (femaleCount > 0) {
-                        const femaleHeader = document.createElement('li');
-                        femaleHeader.className = 'text-slate-400 font-semibold text-xs uppercase pt-2 pb-1';
-                        femaleHeader.textContent = 'Females';
-                        listEl.appendChild(femaleHeader);
-                         shifts[shift].females.forEach(emp => {
-                            const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center bg-slate-700/30 p-2 rounded-md';
-                            li.innerHTML = `
-                                <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
-                                <span class="text-slate-500 font-mono text-xs">${emp['Emp Id']}</span>
-                            `;
-                            listEl.appendChild(li);
-                        });
-                    }
-                } else {
-                    listEl.innerHTML = `<li class="text-slate-500">No employees scheduled.</li>`;
-                }
+                summaryEl.innerHTML = `Scheduled: 
+                    <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="all" data-filter-name="All">${totalCount}</span> 
+                    (M: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="males" data-filter-name="Males">${maleCount}</span>, 
+                     F: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="females" data-filter-name="Females">${femaleCount}</span>)`;
             };
             
-            updateShiftCard('A', shiftASummary, shiftAList);
-            updateShiftCard('B', shiftBSummary, shiftBList);
-            updateShiftCard('C', shiftCSummary, shiftCList);
+            ['A', 'B', 'C'].forEach(updateShiftCard);
+            addDashboardFilterListeners();
+        }
 
-            todaysDashboard.classList.remove('hidden');
+        function addDashboardFilterListeners() {
+            document.querySelectorAll('.dashboard-filter-btn').forEach(btn => {
+                btn.addEventListener('click', handleDashboardFilterClick);
+            });
+        }
+        
+        function handleDashboardFilterClick(e) {
+            const { shift, filter, filterName } = e.target.dataset;
+            const dataToShow = dailyShiftData[shift][filter];
+            const title = `Shift ${shift} - ${filterName} (${dataToShow.length})`;
+            showModal(title, dataToShow);
         }
         
         function switchTabView(view) {
             currentView = view;
-            
             [allTab, maleTab, femaleTab].forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.view === view);
             });
-            
-            resetDateFilter();
+            resetFilters();
         }
 
         function getShiftInfo(shiftValue) {
@@ -489,7 +523,12 @@
 
         function renderTable(headers, data) {
             if (!data || data.length === 0) {
-                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view.</div>`;
+                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view or filter.</div>`;
+                 return;
+            }
+            
+            if (headers.length === 0) {
+                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No upcoming roster data to display. Use the Daily Roster above to view past dates.</div>`;
                  return;
             }
 
@@ -519,6 +558,34 @@
             tableHTML += `</tbody></table>`;
             tableContainer.innerHTML = tableHTML;
         }
+        
+        // --- Modal Functions ---
+        function showModal(title, employees) {
+            modalTitle.textContent = title;
+            modalContent.innerHTML = ''; // Clear previous content
+
+            if (employees.length > 0) {
+                 const list = document.createElement('ul');
+                 list.className = 'space-y-2';
+                 employees.forEach(emp => {
+                     const li = document.createElement('li');
+                     li.className = 'flex justify-between items-center bg-slate-700/50 p-2 rounded-md';
+                     li.innerHTML = `
+                         <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
+                         <span class="text-slate-400 font-mono text-xs">${emp['Emp Id']}</span>
+                     `;
+                     list.appendChild(li);
+                 });
+                 modalContent.appendChild(list);
+            } else {
+                modalContent.innerHTML = '<p class="text-slate-400 text-center py-4">No employees in this group.</p>';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function hideModal() {
+            modal.classList.add('hidden');
+        }
 
         function showError(message) {
             tableContainer.innerHTML = `<div class="text-center text-red-400 py-20 px-4">${message}</div>`;
@@ -527,6 +594,19 @@
         function populateDateFilters(dateHeaders) {
             startDateSelect.innerHTML = '';
             endDateSelect.innerHTML = '';
+
+            if (dateHeaders.length === 0) {
+                controlsSection.querySelector('h3').textContent = 'No upcoming dates to filter.';
+                filterBtn.disabled = true;
+                resetBtn.disabled = true;
+                exportBtn.disabled = true;
+                return;
+            }
+            controlsSection.querySelector('h3').textContent = 'Filter by Date:';
+            filterBtn.disabled = false;
+            resetBtn.disabled = false;
+            exportBtn.disabled = false;
+
             dateHeaders.forEach(date => {
                 const option1 = document.createElement('option');
                 option1.value = date;
@@ -537,13 +617,16 @@
                 option2.textContent = date;
                 endDateSelect.appendChild(option2);
             });
+
             if (endDateSelect.options.length > 0) {
                 endDateSelect.selectedIndex = endDateSelect.options.length - 1;
             }
         }
 
         function applyDateFilter() {
-            filterError.textContent = ''; 
+            filterError.textContent = '';
+            if (fullRosterData.headers.length === 0) return;
+
             const startDate = startDateSelect.value;
             const endDate = endDateSelect.value;
             const allHeaders = fullRosterData.headers;
@@ -557,9 +640,11 @@
             renderTable(filteredHeaders, fullRosterData[currentView]);
         }
 
-        function resetDateFilter() {
+        function resetFilters() {
             filterError.textContent = '';
-            startDateSelect.selectedIndex = 0;
+            if (startDateSelect.options.length > 0) {
+                startDateSelect.selectedIndex = 0;
+            }
             if (endDateSelect.options.length > 0) {
                 endDateSelect.selectedIndex = endDateSelect.options.length - 1;
             }
@@ -567,6 +652,10 @@
         }
 
         function exportRosterToCSV() {
+            if (fullRosterData.headers.length === 0) {
+                filterError.textContent = "Cannot export, no upcoming dates available.";
+                return;
+            }
             const startDate = startDateSelect.value;
             const endDate = endDateSelect.value;
             const allHeaders = fullRosterData.headers;
