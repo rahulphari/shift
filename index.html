@@ -261,7 +261,7 @@
         const modalContent = document.getElementById('modal-content');
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        let fullRosterData = { all: [], male: [], female: [], headers: [], allHeaders: [] };
+        let fullRosterData = { all: [], male: [], female: [], headers: [], allHeaders: [], dateObjects: {} };
         let dailyShiftData = {};
         let currentView = 'all';
 
@@ -337,29 +337,71 @@
         });
 
         const nameSorter = (a, b) => (a['Employee Name'] || '').localeCompare(b['Employee Name'] || '');
+
+        /**
+         * Helper to intelligently guess the year for headers like "31-Dec" or "01-Jan".
+         * Tracks sequence to detect year rollover.
+         */
+        function parseHeadersWithYearRollover(headers) {
+            const monthMap = {
+                'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+                'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+            };
+
+            let currentYear = 2025; // Base year
+            let lastMonthIndex = -1;
+            const results = [];
+
+            headers.forEach(header => {
+                const match = header.match(/(\d+)-([a-zA-Z]+)/);
+                if (!match) return;
+
+                const day = parseInt(match[1]);
+                const monthName = match[2].toLowerCase().substring(0, 3);
+                const monthIndex = monthMap[monthName];
+
+                if (monthIndex !== undefined) {
+                    // If we see a transition from a later month to an earlier month (e.g., Dec -> Jan), increment year
+                    if (lastMonthIndex !== -1 && monthIndex < lastMonthIndex) {
+                        currentYear++;
+                    }
+                    
+                    const date = new Date(currentYear, monthIndex, day);
+                    if (!isNaN(date.getTime())) {
+                        results.push({ header, date });
+                        lastMonthIndex = monthIndex;
+                    }
+                }
+            });
+
+            return results;
+        }
         
         function processWorkbook(workbook) {
-            let dateHeaders = new Set(); 
+            let dateHeadersSet = new Set(); 
+            let dateHeadersList = []; // Maintain order found in sheet
 
             const processSheet = (sheetName, source) => {
-                if (!workbook.Sheets[sheetName]) {
-                    console.warn(`Sheet "${sheetName}" not found in the workbook.`);
-                    return [];
-                }
+                if (!workbook.Sheets[sheetName]) return [];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: 1, defval: "" });
 
-                jsonData.forEach(row => {
-                    Object.keys(row).forEach(key => {
+                // Identify date headers from the first row of data keys
+                if (jsonData.length > 0) {
+                    Object.keys(jsonData[0]).forEach(key => {
                         const isStandardColumn = ['Employee Name', 'Emp Id', 'Designation'].includes(key);
                         const hasDigits = /\d/.test(key);
                         const hasLetters = /[a-zA-Z]/.test(key);
                         if (!isStandardColumn && hasDigits && hasLetters) {
-                            dateHeaders.add(key);
+                           if (!dateHeadersSet.has(key)) {
+                               dateHeadersSet.add(key);
+                               dateHeadersList.push(key);
+                           }
                         }
                     });
-                    row._source = source;
-                });
+                }
+
+                jsonData.forEach(row => { row._source = source; });
                 return jsonData.filter(row => row['Employee Name'] || row['Emp Id']);
             };
 
@@ -367,19 +409,19 @@
             const rawFemaleData = processSheet('Processing MP', 'female');
             const combinedRawData = [...rawMaleData, ...rawFemaleData];
             
-            const allParsedHeaders = Array.from(dateHeaders).map(header => {
-                const date = new Date(`${header} 2025`);
-                return { header, date };
-            }).filter(item => !isNaN(item.date.getTime()));
+            // Intelligent date parsing
+            const allParsedHeaders = parseHeadersWithYearRollover(dateHeadersList);
+            const dateMap = {};
+            allParsedHeaders.forEach(item => { dateMap[item.header] = item.date; });
 
-            allParsedHeaders.sort((a, b) => a.date - b.date);
-            
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            const futureHeaders = allParsedHeaders.filter(item => item.date >= today).map(item => item.header);
-
+            // Separate headers into "Future/Active" and "Historical"
             const allHeadersSorted = allParsedHeaders.map(item => item.header);
+            const futureHeaders = allParsedHeaders
+                .filter(item => item.date >= today)
+                .map(item => item.header);
 
             const employeeMap = new Map();
             combinedRawData.forEach(row => {
@@ -392,36 +434,31 @@
                 }, 0);
 
                 const existingEntry = employeeMap.get(empId);
-                
                 if (!existingEntry || score > existingEntry.score) {
                     employeeMap.set(empId, { row: row, score: score });
                 }
             });
 
             const deduplicatedData = Array.from(employeeMap.values()).map(entry => entry.row);
-            
             const allDataSorted = deduplicatedData.sort(nameSorter);
-            const maleDataSorted = allDataSorted.filter(row => row._source === 'male');
-            const femaleDataSorted = allDataSorted.filter(row => row._source === 'female');
             
             fullRosterData = {
                 all: allDataSorted,
-                male: maleDataSorted,
-                female: femaleDataSorted,
-                headers: futureHeaders.length > 0 ? futureHeaders : [], // Only future dates for main table
-                allHeaders: allHeadersSorted // All dates for roster selector
+                male: allDataSorted.filter(row => row._source === 'male'),
+                female: allDataSorted.filter(row => row._source === 'female'),
+                headers: futureHeaders, // Only future dates for main table
+                allHeaders: allHeadersSorted, // All dates for roster selector
+                dateObjects: dateMap // For formatting exports
             };
 
             if (allDataSorted.length > 0) {
                 document.getElementById('dashboard-title').innerHTML = `Shift-Sight <span class="text-slate-400 font-medium text-xl">(${allDataSorted.length} Employees)</span>`;
-                
                 populateRosterDateSelect();
                 populateDateFilters(fullRosterData.headers);
                 switchTabView('all');
-                
                 [legend, controlsSection, tabsSection, rosterDashboard].forEach(el => el.classList.remove('hidden'));
             } else {
-                showError('No valid data found in "Male MP" or "Female MP" sheets. Please check the file format and ensure headers are in the second row.');
+                showError('No valid data found in "Hub MP" or "Processing MP" sheets.');
             }
         }
 
@@ -434,17 +471,17 @@
                 rosterDateSelect.appendChild(option);
             });
 
+            // Try to auto-select today
             const today = new Date();
             const day = today.getDate();
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const month = monthNames[today.getMonth()];
-            const todayHeaderGenerated = `${day}-${month}`;
+            const todayHeader = `${day}-${month}`;
             
-            const todayOption = Array.from(rosterDateSelect.options).find(opt => opt.value.toUpperCase() === todayHeaderGenerated.toUpperCase());
+            const todayOption = Array.from(rosterDateSelect.options).find(opt => opt.value.toUpperCase() === todayHeader.toUpperCase());
             if (todayOption) {
                 rosterDateSelect.value = todayOption.value;
             } else if (rosterDateSelect.options.length > 0) {
-                 // Fallback to the first available date if today is not found
                  rosterDateSelect.selectedIndex = 0;
             }
             renderRosterDashboard(rosterDateSelect.value);
@@ -463,49 +500,37 @@
                 if (dailyShiftData.hasOwnProperty(shift)) {
                     const shiftGroup = dailyShiftData[shift];
                     shiftGroup.all.push(employee);
-                    if (employee._source === 'male') {
-                        shiftGroup.males.push(employee);
-                    } else if (employee._source === 'female') {
-                        shiftGroup.females.push(employee);
-                    }
+                    if (employee._source === 'male') shiftGroup.males.push(employee);
+                    else if (employee._source === 'female') shiftGroup.females.push(employee);
                 }
             });
             
-            const updateShiftCard = (shiftLetter) => {
+            ['A', 'B', 'C'].forEach(shiftLetter => {
                 const summaryEl = document.getElementById(`shift-${shiftLetter.toLowerCase()}-summary`);
                 const shiftData = dailyShiftData[shiftLetter];
-                const maleCount = shiftData.males.length;
-                const femaleCount = shiftData.females.length;
-                const totalCount = maleCount + femaleCount;
-
+                const m = shiftData.males.length;
+                const f = shiftData.females.length;
                 summaryEl.innerHTML = `Scheduled: 
-                    <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="all" data-filter-name="All">${totalCount}</span> 
-                    (M: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="males" data-filter-name="Males">${maleCount}</span>, 
-                     F: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="females" data-filter-name="Females">${femaleCount}</span>)`;
-            };
-            
-            ['A', 'B', 'C'].forEach(updateShiftCard);
+                    <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="all" data-filter-name="All">${m + f}</span> 
+                    (M: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="males" data-filter-name="Males">${m}</span>, 
+                     F: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="females" data-filter-name="Females">${f}</span>)`;
+            });
             addDashboardFilterListeners();
         }
 
         function addDashboardFilterListeners() {
             document.querySelectorAll('.dashboard-filter-btn').forEach(btn => {
-                btn.addEventListener('click', handleDashboardFilterClick);
+                btn.addEventListener('click', (e) => {
+                    const { shift, filter, filterName } = e.target.dataset;
+                    const data = dailyShiftData[shift][filter];
+                    showModal(`Shift ${shift} - ${filterName} (${data.length})`, data);
+                });
             });
-        }
-        
-        function handleDashboardFilterClick(e) {
-            const { shift, filter, filterName } = e.target.dataset;
-            const dataToShow = dailyShiftData[shift][filter];
-            const title = `Shift ${shift} - ${filterName} (${dataToShow.length})`;
-            showModal(title, dataToShow);
         }
         
         function switchTabView(view) {
             currentView = view;
-            [allTab, maleTab, femaleTab].forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.view === view);
-            });
+            [allTab, maleTab, femaleTab].forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
             resetFilters();
         }
 
@@ -523,57 +548,45 @@
 
         function renderTable(headers, data) {
             if (!data || data.length === 0) {
-                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view or filter.</div>`;
+                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view.</div>`;
                  return;
             }
-            
             if (headers.length === 0) {
                  tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No upcoming roster data to display. Use the Daily Roster above to view past dates.</div>`;
                  return;
             }
 
-            let tableHTML = `
-                <table class="min-w-full divide-y divide-slate-700">
-                    <thead class="bg-slate-800">
-                        <tr>
-                            <th scope="col" class="sticky left-0 bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-16 border-r border-slate-700">S.No.</th>
-                            <th scope="col" class="sticky left-16 bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-48 border-r border-slate-700">Employee Name</th>
-                            <th scope="col" class="sticky left-[16rem] bg-slate-800 z-10 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-32 border-r border-slate-700">Emp Id</th>`;
-            headers.forEach(header => {
-                tableHTML += `<th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">${header}</th>`;
-            });
+            let tableHTML = `<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800"><tr>
+                <th class="sticky left-0 bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-16 border-r border-slate-700">S.No.</th>
+                <th class="sticky left-16 bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-48 border-r border-slate-700">Employee Name</th>
+                <th class="sticky left-[16rem] bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-32 border-r border-slate-700">Emp Id</th>`;
+            headers.forEach(h => { tableHTML += `<th class="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase">${h}</th>`; });
             tableHTML += `</tr></thead><tbody class="bg-slate-900 divide-y divide-slate-800">`;
             
             data.forEach((row, index) => {
-                tableHTML += `<tr class="group hover:bg-slate-800 transition-colors duration-150">
-                                <td class="sticky left-0 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm text-slate-400 border-r border-slate-700">${index + 1}</td>
-                                <td class="sticky left-16 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-200 border-r border-slate-700">${row['Employee Name'] || 'N/A'}</td>
-                                <td class="sticky left-[16rem] bg-slate-900 group-hover:bg-slate-800 px-4 py-3 whitespace-nowrap text-sm text-slate-400 border-r border-slate-700">${row['Emp Id'] || 'N/A'}</td>`;
+                tableHTML += `<tr class="group hover:bg-slate-800 transition-colors">
+                                <td class="sticky left-0 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm text-slate-400 border-r border-slate-700">${index + 1}</td>
+                                <td class="sticky left-16 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm font-medium text-slate-200 border-r border-slate-700">${row['Employee Name'] || 'N/A'}</td>
+                                <td class="sticky left-[16rem] bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm text-slate-400 border-r border-slate-700">${row['Emp Id'] || 'N/A'}</td>`;
                 headers.forEach(header => {
                     const shiftInfo = getShiftInfo(row[header] || '');
-                    tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold ${shiftInfo.class}">${shiftInfo.text}</td>`;
+                    tableHTML += `<td class="px-4 py-3 text-center text-sm font-bold ${shiftInfo.class}">${shiftInfo.text}</td>`;
                 });
                 tableHTML += `</tr>`;
             });
-            tableHTML += `</tbody></table>`;
-            tableContainer.innerHTML = tableHTML;
+            tableContainer.innerHTML = tableHTML + `</tbody></table>`;
         }
         
-        // --- Modal Functions ---
         function showModal(title, employees) {
             modalTitle.textContent = title;
-            modalContent.innerHTML = ''; // Clear previous content
-
+            modalContent.innerHTML = ''; 
             if (employees.length > 0) {
                  const list = document.createElement('ul');
                  list.className = 'space-y-2';
                  employees.forEach(emp => {
                      const li = document.createElement('li');
                      li.className = 'flex justify-between items-center bg-slate-700/50 p-2 rounded-md';
-                     li.innerHTML = `
-                         <span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span>
-                         <span class="text-slate-400 font-mono text-xs">${emp['Emp Id']}</span>
-                     `;
+                     li.innerHTML = `<span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span><span class="text-slate-400 font-mono text-xs">${emp['Emp Id']}</span>`;
                      list.appendChild(li);
                  });
                  modalContent.appendChild(list);
@@ -583,166 +596,83 @@
             modal.classList.remove('hidden');
         }
 
-        function hideModal() {
-            modal.classList.add('hidden');
-        }
-
-        function showError(message) {
-            tableContainer.innerHTML = `<div class="text-center text-red-400 py-20 px-4">${message}</div>`;
-        }
+        function hideModal() { modal.classList.add('hidden'); }
+        function showError(message) { tableContainer.innerHTML = `<div class="text-center text-red-400 py-20 px-4">${message}</div>`; }
         
         function populateDateFilters(dateHeaders) {
-            startDateSelect.innerHTML = '';
-            endDateSelect.innerHTML = '';
-
-            if (dateHeaders.length === 0) {
-                controlsSection.querySelector('h3').textContent = 'No upcoming dates to filter.';
-                filterBtn.disabled = true;
-                resetBtn.disabled = true;
-                exportBtn.disabled = true;
-                return;
-            }
-            controlsSection.querySelector('h3').textContent = 'Filter by Date:';
-            filterBtn.disabled = false;
-            resetBtn.disabled = false;
-            exportBtn.disabled = false;
-
+            startDateSelect.innerHTML = ''; endDateSelect.innerHTML = '';
+            if (dateHeaders.length === 0) return;
             dateHeaders.forEach(date => {
-                const option1 = document.createElement('option');
-                option1.value = date;
-                option1.textContent = date;
-                startDateSelect.appendChild(option1);
-                const option2 = document.createElement('option');
-                option2.value = date;
-                option2.textContent = date;
-                endDateSelect.appendChild(option2);
+                startDateSelect.appendChild(new Option(date, date));
+                endDateSelect.appendChild(new Option(date, date));
             });
-
-            if (endDateSelect.options.length > 0) {
-                endDateSelect.selectedIndex = endDateSelect.options.length - 1;
-            }
+            if (endDateSelect.options.length > 0) endDateSelect.selectedIndex = endDateSelect.options.length - 1;
         }
 
         function applyDateFilter() {
-            filterError.textContent = '';
-            if (fullRosterData.headers.length === 0) return;
-
-            const startDate = startDateSelect.value;
-            const endDate = endDateSelect.value;
             const allHeaders = fullRosterData.headers;
-            const startIndex = allHeaders.indexOf(startDate);
-            const endIndex = allHeaders.indexOf(endDate);
+            const startIndex = allHeaders.indexOf(startDateSelect.value);
+            const endIndex = allHeaders.indexOf(endDateSelect.value);
             if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                filterError.textContent = "Invalid date range. 'From' date cannot be after 'To' date.";
-                return;
+                filterError.textContent = "Invalid date range."; return;
             }
-            const filteredHeaders = allHeaders.slice(startIndex, endIndex + 1);
-            renderTable(filteredHeaders, fullRosterData[currentView]);
+            filterError.textContent = "";
+            renderTable(allHeaders.slice(startIndex, endIndex + 1), fullRosterData[currentView]);
         }
 
         function resetFilters() {
-            filterError.textContent = '';
-            if (startDateSelect.options.length > 0) {
-                startDateSelect.selectedIndex = 0;
-            }
-            if (endDateSelect.options.length > 0) {
-                endDateSelect.selectedIndex = endDateSelect.options.length - 1;
-            }
+            if (startDateSelect.options.length > 0) startDateSelect.selectedIndex = 0;
+            if (endDateSelect.options.length > 0) endDateSelect.selectedIndex = endDateSelect.options.length - 1;
             renderTable(fullRosterData.headers, fullRosterData[currentView]);
         }
 
         function exportRosterToCSV() {
-            if (fullRosterData.headers.length === 0) {
-                filterError.textContent = "Cannot export, no upcoming dates available.";
-                return;
-            }
-            const startDate = startDateSelect.value;
-            const endDate = endDateSelect.value;
             const allHeaders = fullRosterData.headers;
-            const startIndex = allHeaders.indexOf(startDate);
-            const endIndex = allHeaders.indexOf(endDate);
-
-            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                filterError.textContent = "Cannot export, invalid date range selected.";
-                return;
-            }
-            filterError.textContent = "";
+            const startIndex = allHeaders.indexOf(startDateSelect.value);
+            const endIndex = allHeaders.indexOf(endDateSelect.value);
+            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return;
 
             const headersToExport = allHeaders.slice(startIndex, endIndex + 1);
             const dataToExport = fullRosterData[currentView];
-
-            const shiftMap = {
-                'A': '07:00 - 16:00',
-                'B': '13:00 - 22:00',
-                'C': '22:00 - 07:00',
-                'W/OFF': 'W/OFF',
-                'WOFF': 'W/OFF',
-                'W-OFF': 'W/OFF'
-            };
+            const shiftMap = { 'A': '07:00 - 16:00', 'B': '13:00 - 22:00', 'C': '22:00 - 07:00', 'W/OFF': 'W/OFF', 'WOFF': 'W/OFF', 'W-OFF': 'W/OFF' };
 
             const getFormattedDate = (header) => {
-                const date = new Date(`${header} 2025`);
-                if (isNaN(date.getTime())) { return header; }
-                const day = String(date.getDate());
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const month = monthNames[date.getMonth()];
-                const year = date.getFullYear().toString().slice(-2);
-                return `${day}-${month}-${year}`;
+                const date = fullRosterData.dateObjects[header];
+                if (!date) return header;
+                const d = String(date.getDate());
+                const mArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const m = mArr[date.getMonth()];
+                const y = date.getFullYear().toString().slice(-2);
+                return `${d}-${m}-${y}`;
             };
 
             const csvRows = [['Username', 'Shift Name', 'From', 'To']];
-
             dataToExport.forEach(row => {
                 const empId = row['Emp Id'];
                 if (!empId) return;
 
-                let currentShift = null;
-                let shiftStartDate = null;
-
+                let currentShift = null, shiftStartDate = null;
                 headersToExport.forEach((header, index) => {
-                    const shiftValue = (row[header] || '').toString().trim().toUpperCase();
-
-                    if (currentShift !== shiftValue) {
-                        if (currentShift && shiftMap.hasOwnProperty(currentShift)) {
-                            const shiftName = shiftMap[currentShift];
-                            const formattedStartDate = getFormattedDate(shiftStartDate);
-                            const formattedEndDate = getFormattedDate(headersToExport[index - 1]);
-                            csvRows.push([empId, shiftName, formattedStartDate, formattedEndDate]);
+                    const val = (row[header] || '').toString().trim().toUpperCase();
+                    if (currentShift !== val) {
+                        if (currentShift && shiftMap[currentShift]) {
+                            csvRows.push([empId, shiftMap[currentShift], getFormattedDate(shiftStartDate), getFormattedDate(headersToExport[index - 1])]);
                         }
-                        
-                        if (shiftMap.hasOwnProperty(shiftValue)) {
-                            currentShift = shiftValue;
-                            shiftStartDate = header;
-                        } else {
-                            currentShift = null;
-                            shiftStartDate = null;
-                        }
+                        currentShift = shiftMap.hasOwnProperty(val) ? val : null;
+                        shiftStartDate = currentShift ? header : null;
                     }
-
                     if (index === headersToExport.length - 1 && currentShift && shiftStartDate) {
-                        const shiftName = shiftMap[currentShift];
-                        const formattedStartDate = getFormattedDate(shiftStartDate);
-                        const formattedEndDate = getFormattedDate(header);
-                        csvRows.push([empId, shiftName, formattedStartDate, formattedEndDate]);
+                        csvRows.push([empId, shiftMap[currentShift], getFormattedDate(shiftStartDate), getFormattedDate(header)]);
                     }
                 });
             });
 
-            const csvString = csvRows.map(r => r.join(',')).join('\n');
-            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-            
+            const blob = new Blob([csvRows.map(r => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            if (link.download !== undefined) { 
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', 'roster_summary.csv');
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+            link.href = URL.createObjectURL(blob);
+            link.download = 'roster_summary.csv';
+            link.click();
         }
     </script>
 </body>
 </html>
-
