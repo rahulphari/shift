@@ -4,98 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shift-Sight</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS/xlsx library for reading Excel files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* Use the Inter font family */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #020617; /* Deep-space navy */
+            background-color: #020617;
             background-image: 
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
             background-size: 40px 40px;
             animation: pan 90s linear infinite;
         }
-        
-        /* Atmospheric Background Animation */
-        @keyframes pan {
-            from { background-position: 0 0; }
-            to { background-position: -400px -400px; }
-        }
-
-        /* Critical Pulse Animation */
-        @keyframes pulse-red {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
-            }
-            70% {
-                box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
-            }
-        }
-        .pulse-critical {
-            animation: pulse-red 2s infinite;
-        }
-
-        /* Custom scrollbar for better aesthetics */
-        #table-container::-webkit-scrollbar, #modal-content::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        #table-container::-webkit-scrollbar-track, #modal-content::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        #table-container::-webkit-scrollbar-thumb, #modal-content::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-        }
-        #table-container::-webkit-scrollbar-thumb:hover, #modal-content::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
-
-        /* Styles for active and inactive tabs */
-        .tab-btn {
-            transition: all 0.2s ease-in-out;
-        }
-        .tab-btn.active {
-            border-color: #3b82f6; /* Bright Blue */
-            color: #3b82f6;
-        }
-        .gradient-text {
-            background: linear-gradient(to right, #22d3ee, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .dashboard-filter-btn {
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .dashboard-filter-btn:hover {
-            text-decoration: underline;
-            color: #60a5fa; /* A lighter blue for hover */
-        }
-        
-        /* Modal Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        .modal-animated {
-            animation: fadeIn 0.2s ease-out;
-        }
-        .modal-panel-animated {
-            animation: scaleIn 0.2s ease-out;
-        }
-
+        @keyframes pan { from { background-position: 0 0; } to { background-position: -400px -400px; } }
+        #table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        #table-container::-webkit-scrollbar-track { background: #0f172a; }
+        #table-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .tab-btn.active { border-color: #3b82f6; color: #3b82f6; }
+        .gradient-text { background: linear-gradient(to right, #22d3ee, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .dashboard-filter-btn { cursor: pointer; transition: color 0.2s; font-weight: 700; }
+        .dashboard-filter-btn:hover { color: #60a5fa; text-decoration: underline; }
     </style>
 </head>
 <body class="text-slate-300 flex flex-col min-h-screen">
@@ -104,574 +35,344 @@
         <!-- Homepage View -->
         <div id="homepage-view" class="text-center max-w-2xl w-full">
             <h1 class="text-6xl font-black tracking-tight gradient-text mb-2">SHIFT-SIGHT</h1>
-            <p class="text-slate-400 text-lg mb-10">Analyze Roster Insights. Export Shift Data.</p>
-            
+            <p class="text-slate-400 text-lg mb-10">2026 Ready Roster Analyzer.</p>
             <div id="drop-zone" class="bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-2xl p-10 cursor-pointer hover:border-blue-500 hover:bg-slate-800 transition-all duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <h2 class="mt-4 text-xl font-semibold text-slate-200">Upload Roster Data</h2>
-                <p class="mt-1 text-sm text-slate-500">Drag & drop or click to select a .xlsx file</p>
+                <h2 class="mt-4 text-xl font-semibold text-slate-200">Upload Data</h2>
+                <p class="mt-1 text-sm text-slate-500">Drag & drop your .xlsx file here</p>
                 <input id="file-upload" type="file" accept=".xlsx, .xls" class="hidden"/>
             </div>
              <p id="homepage-error" class="text-red-400 text-sm mt-4"></p>
         </div>
 
         <!-- Dashboard View -->
-        <div id="dashboard-view" class="hidden max-w-7xl w-full mx-auto bg-slate-900/70 backdrop-blur-sm rounded-2xl shadow-2xl shadow-blue-500/5 border border-slate-700 p-6 sm:p-8">
+        <div id="dashboard-view" class="hidden max-w-7xl w-full mx-auto bg-slate-900/70 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 sm:p-8">
             <div class="border-b border-slate-700 pb-4 mb-6">
                 <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-bold text-slate-100 gradient-text">Shift-Sight</h1>
-                <p class="text-slate-400 mt-2">Roster loaded. Filter and export as needed.</p>
             </div>
             
-            <!-- Roster Dashboard Section -->
             <div id="roster-dashboard" class="hidden mb-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                     <h2 class="text-xl font-bold text-slate-200">Daily Roster</h2>
                     <div class="flex items-center gap-2 mt-2 sm:mt-0">
                         <label for="roster-date-select" class="text-sm font-medium">Select Date:</label>
-                        <select id="roster-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                        <select id="roster-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm"></select>
                     </div>
                 </div>
                 <div id="roster-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Shift A Card -->
-                    <div class="bg-slate-800/50 p-4 rounded-lg border border-blue-500/50 flex flex-col">
-                        <h3 class="font-bold text-lg text-blue-300 mb-2">Shift A (07:00 - 16:00)</h3>
-                        <div id="shift-a-summary" class="text-slate-400 text-sm font-medium"></div>
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-blue-500/30">
+                        <h3 class="font-bold text-blue-300 mb-2">Shift A (07:00-16:00)</h3>
+                        <div id="shift-a-summary" class="text-slate-400 text-sm"></div>
                     </div>
-                    <!-- Shift B Card -->
-                    <div class="bg-slate-800/50 p-4 rounded-lg border border-green-500/50 flex flex-col">
-                         <h3 class="font-bold text-lg text-green-300 mb-2">Shift B (13:00 - 22:00)</h3>
-                         <div id="shift-b-summary" class="text-slate-400 text-sm font-medium"></div>
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-green-500/30">
+                         <h3 class="font-bold text-green-300 mb-2">Shift B (13:00-22:00)</h3>
+                         <div id="shift-b-summary" class="text-slate-400 text-sm"></div>
                     </div>
-                    <!-- Shift C Card -->
-                    <div class="bg-slate-800/50 p-4 rounded-lg border border-amber-500/50 flex flex-col">
-                         <h3 class="font-bold text-lg text-amber-300 mb-2">Shift C (22:00 - 07:00)</h3>
-                         <div id="shift-c-summary" class="text-slate-400 text-sm font-medium"></div>
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-amber-500/30">
+                         <h3 class="font-bold text-amber-300 mb-2">Shift C (22:00-07:00)</h3>
+                         <div id="shift-c-summary" class="text-slate-400 text-sm"></div>
                     </div>
                 </div>
             </div>
 
-
-            <!-- Legend Section -->
-            <div id="legend" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg">
-                 <h3 class="text-lg font-semibold mb-3 text-slate-200">Legend</h3>
-                 <div class="flex flex-wrap gap-3 items-center">
-                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-blue-500/20 text-blue-300">Shift A (07:00 - 16:00)</span>
-                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-green-500/20 text-green-300">Shift B (13:00 - 22:00)</span>
-                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-amber-500/20 text-amber-300">Shift C (22:00 - 07:00)</span>
-                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-slate-700 text-slate-300">W/OFF</span>
-                     <span class="px-3 py-1 text-xs font-medium rounded-md bg-red-500/20 text-red-300">Absent / N/A</span>
+            <div id="legend" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                 <div class="flex flex-wrap gap-4 items-center text-[11px] font-bold">
+                     <span class="px-2 py-1 rounded bg-blue-500/20 text-blue-400">A: 07:00-16:00</span>
+                     <span class="px-2 py-1 rounded bg-green-500/20 text-green-400">B: 13:00-22:00</span>
+                     <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-400">C: 22:00-07:00</span>
+                     <span class="px-2 py-1 rounded bg-slate-700 text-slate-300">W/O: Week-Off</span>
                  </div>
             </div>
 
-            <!-- Tabs Section -->
             <div id="tabs-section" class="hidden mb-4 border-b border-slate-700">
-                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button id="all-tab" data-view="all" class="tab-btn active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">All Employees</button>
-                    <button id="male-tab" data-view="male" class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">Male MPs</button>
-                    <button id="female-tab" data-view="female" class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500">Female MPs</button>
+                <nav class="-mb-px flex space-x-6">
+                    <button id="all-tab" data-view="all" class="tab-btn active py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200">All</button>
+                    <button id="male-tab" data-view="male" class="tab-btn py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200">Male MPs</button>
+                    <button id="female-tab" data-view="female" class="tab-btn py-3 px-1 border-b-2 font-medium text-sm border-transparent text-slate-400 hover:text-slate-200">Female MPs</button>
                 </nav>
             </div>
 
-            <!-- Date Filter and Export Section -->
             <div id="controls-section" class="hidden my-4 p-4 bg-slate-800/50 rounded-lg">
                 <div class="flex flex-col sm:flex-row items-center gap-4 w-full">
-                    <h3 class="text-md font-semibold text-slate-200 whitespace-nowrap">Filter by Date:</h3>
-                    <div class="flex items-center gap-2">
-                        <label for="start-date-select" class="text-sm font-medium">From:</label>
-                        <select id="start-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                    <h3 class="text-sm font-bold text-slate-400 uppercase">View Range:</h3>
+                    <div class="flex gap-2 items-center">
+                        <select id="start-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm"></select>
+                        <span>to</span>
+                        <select id="end-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm"></select>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <label for="end-date-select" class="text-sm font-medium">To:</label>
-                        <select id="end-date-select" class="p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
-                    </div>
-                    <div class="flex items-center gap-2 sm:ml-auto">
-                        <button id="filter-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-500 transition-colors duration-200 shadow-lg shadow-blue-500/20">Filter</button>
-                        <button id="reset-btn" class="bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors duration-200">Reset</button>
-                        <button id="export-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-500 transition-colors duration-200 shadow-lg shadow-green-500/20">Export Roster</button>
+                    <div class="flex gap-2 sm:ml-auto">
+                        <button id="filter-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-500 transition-colors">Apply</button>
+                        <button id="export-btn" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-500 transition-colors">Export CSV</button>
                     </div>
                 </div>
-                <p id="filter-error" class="text-red-400 text-sm mt-2 text-center w-full"></p>
             </div>
 
-            <!-- Data Visualization Table -->
-            <div id="table-container" class="overflow-x-auto rounded-lg border border-slate-700">
-                <div id="placeholder" class="text-center text-slate-500 py-20">
-                     <div class="text-center text-slate-400 py-20">Processing file...</div>
-                </div>
+            <div id="table-container" class="overflow-x-auto rounded-lg border border-slate-700 min-h-[300px]">
+                <div id="placeholder" class="text-center text-slate-500 py-20 font-medium">Please wait, analyzing data...</div>
             </div>
         </div>
     </main>
 
-    <footer class="text-center p-4 text-xs text-slate-500">
-        Designed & Crafted by Rh. | ⚡️ Team Sonic - Hubli (for internal use only)
-    </footer>
-
-    <!-- Modal for Daily Roster Details -->
-    <div id="modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-animated">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg w-full max-w-lg modal-panel-animated">
+    <!-- Details Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="flex justify-between items-center p-4 border-b border-slate-700">
-                <h3 id="modal-title" class="text-lg font-bold text-slate-200"></h3>
-                <button id="modal-close-btn" class="text-slate-400 hover:text-white transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <h3 id="modal-title" class="text-lg font-bold gradient-text"></h3>
+                <button id="modal-close-btn" class="text-slate-400 text-2xl">&times;</button>
             </div>
-            <div id="modal-content" class="p-4 max-h-[60vh] overflow-y-auto">
-                <!-- Content will be injected here -->
-            </div>
+            <div id="modal-content" class="p-4 max-h-[60vh] overflow-y-auto"></div>
         </div>
     </div>
 
-
     <script>
-        const homepageView = document.getElementById('homepage-view');
-        const dashboardView = document.getElementById('dashboard-view');
-        const fileUpload = document.getElementById('file-upload');
-        const dropZone = document.getElementById('drop-zone');
-        const homepageError = document.getElementById('homepage-error');
+        const elements = {
+            homepage: document.getElementById('homepage-view'),
+            dashboard: document.getElementById('dashboard-view'),
+            fileInput: document.getElementById('file-upload'),
+            dropZone: document.getElementById('drop-zone'),
+            table: document.getElementById('table-container'),
+            rosterSelect: document.getElementById('roster-date-select'),
+            modal: document.getElementById('modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalContent: document.getElementById('modal-content'),
+            startSelect: document.getElementById('start-date-select'),
+            endSelect: document.getElementById('end-date-select')
+        };
 
-        const tableContainer = document.getElementById('table-container');
-        const placeholder = document.getElementById('placeholder');
-        const legend = document.getElementById('legend');
-        
-        const tabsSection = document.getElementById('tabs-section');
-        const allTab = document.getElementById('all-tab');
-        const maleTab = document.getElementById('male-tab');
-        const femaleTab = document.getElementById('female-tab');
-
-        const controlsSection = document.getElementById('controls-section');
-        const startDateSelect = document.getElementById('start-date-select');
-        const endDateSelect = document.getElementById('end-date-select');
-        const filterBtn = document.getElementById('filter-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const exportBtn = document.getElementById('export-btn');
-        const filterError = document.getElementById('filter-error');
-
-        // Roster Dashboard elements
-        const rosterDashboard = document.getElementById('roster-dashboard');
-        const rosterContent = document.getElementById('roster-content');
-        const rosterDateSelect = document.getElementById('roster-date-select');
-
-        // Modal elements
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalContent = document.getElementById('modal-content');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
-
-        let fullRosterData = { all: [], male: [], female: [], headers: [], allHeaders: [], dateObjects: {} };
-        let dailyShiftData = {};
+        let fullData = { all: [], male: [], female: [], headers: [], allHeaders: [], dateMap: {} };
         let currentView = 'all';
 
-        // --- Homepage File Upload Logic ---
-        dropZone.addEventListener('click', () => fileUpload.click());
-        fileUpload.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        elements.dropZone.onclick = () => elements.fileInput.click();
+        elements.fileInput.onchange = (e) => processFile(e.target.files[0]);
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('border-blue-500', 'bg-slate-800'), false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-blue-500', 'bg-slate-800'), false);
-        });
-        
-        dropZone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const file = dt.files[0];
-            handleFile(file);
-        }, false);
-
-
-        function handleFile(file) {
+        function processFile(file) {
             if (!file) return;
-            homepageError.textContent = '';
-            
-            if (!file.name.match(/\.(xlsx|xls)$/i)) {
-                homepageError.textContent = 'Invalid file type. Please upload a .xlsx or .xls file.';
-                return;
-            }
-
-            homepageView.classList.add('hidden');
-            dashboardView.classList.remove('hidden');
+            elements.homepage.classList.add('hidden');
+            elements.dashboard.classList.remove('hidden');
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    processWorkbook(workbook);
-                } catch (err) {
-                    console.error("Error processing workbook:", err);
-                    showError('Could not process the Excel file. It might be corrupted or in an unsupported format.');
-                }
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                handleWorkbook(workbook);
             };
             reader.readAsArrayBuffer(file);
         }
-        
-        // --- Dashboard Logic ---
-        filterBtn.addEventListener('click', applyDateFilter);
-        resetBtn.addEventListener('click', resetFilters);
-        exportBtn.addEventListener('click', exportRosterToCSV);
-        rosterDateSelect.addEventListener('change', (e) => renderRosterDashboard(e.target.value));
-        modalCloseBtn.addEventListener('click', hideModal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) hideModal();
-        });
 
-
-        [allTab, maleTab, femaleTab].forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                switchTabView(e.currentTarget.dataset.view);
-            });
-        });
-
-        const nameSorter = (a, b) => (a['Employee Name'] || '').localeCompare(b['Employee Name'] || '');
-
-        /**
-         * Helper to intelligently guess the year for headers like "31-Dec" or "01-Jan".
-         * Tracks sequence to detect year rollover.
-         */
-        function parseHeadersWithYearRollover(headers) {
-            const monthMap = {
-                'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
-                'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
-            };
-
-            let currentYear = 2025; // Base year
-            let lastMonthIndex = -1;
-            const results = [];
-
-            headers.forEach(header => {
-                const match = header.match(/(\d+)-([a-zA-Z]+)/);
-                if (!match) return;
-
-                const day = parseInt(match[1]);
-                const monthName = match[2].toLowerCase().substring(0, 3);
-                const monthIndex = monthMap[monthName];
-
-                if (monthIndex !== undefined) {
-                    // If we see a transition from a later month to an earlier month (e.g., Dec -> Jan), increment year
-                    if (lastMonthIndex !== -1 && monthIndex < lastMonthIndex) {
-                        currentYear++;
-                    }
-                    
-                    const date = new Date(currentYear, monthIndex, day);
-                    if (!isNaN(date.getTime())) {
-                        results.push({ header, date });
-                        lastMonthIndex = monthIndex;
-                    }
+        function findHeaderRow(ws) {
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row.some(cell => String(cell).includes("Employee Name") || String(cell).includes("Emp Id"))) {
+                    return i;
                 }
-            });
-
-            return results;
+            }
+            return 0; // Fallback
         }
-        
-        function processWorkbook(workbook) {
-            let dateHeadersSet = new Set(); 
-            let dateHeadersList = []; // Maintain order found in sheet
 
-            const processSheet = (sheetName, source) => {
-                if (!workbook.Sheets[sheetName]) return [];
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: 1, defval: "" });
+        function handleWorkbook(wb) {
+            const possibleSheetNames = { male: ['Hub MP', 'HUB'], female: ['Processing MP', 'Processing'] };
+            let combined = [];
+            let headerDates = new Map();
 
-                // Identify date headers from the first row of data keys
-                if (jsonData.length > 0) {
-                    Object.keys(jsonData[0]).forEach(key => {
-                        const isStandardColumn = ['Employee Name', 'Emp Id', 'Designation'].includes(key);
-                        const hasDigits = /\d/.test(key);
-                        const hasLetters = /[a-zA-Z]/.test(key);
-                        if (!isStandardColumn && hasDigits && hasLetters) {
-                           if (!dateHeadersSet.has(key)) {
-                               dateHeadersSet.add(key);
-                               dateHeadersList.push(key);
-                           }
-                        }
+            wb.SheetNames.forEach(sheetName => {
+                let source = null;
+                const cleanName = sheetName.trim().toUpperCase();
+                
+                if (possibleSheetNames.male.some(n => cleanName === n.toUpperCase())) source = 'male';
+                else if (possibleSheetNames.female.some(n => cleanName === n.toUpperCase())) source = 'female';
+
+                if (source) {
+                    const ws = wb.Sheets[sheetName];
+                    const headerRowIndex = findHeaderRow(ws);
+                    const rows = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
+                    
+                    rows.forEach(row => {
+                        row._source = source;
+                        Object.keys(row).forEach(key => {
+                            const dateObj = parseAnyDate(key, headerDates);
+                            if (dateObj) headerDates.set(key, dateObj);
+                        });
+                        combined.push(row);
                     });
                 }
+            });
 
-                jsonData.forEach(row => { row._source = source; });
-                return jsonData.filter(row => row['Employee Name'] || row['Emp Id']);
-            };
-
-            const rawMaleData = processSheet('Hub MP', 'male');
-            const rawFemaleData = processSheet('Processing MP', 'female');
-            const combinedRawData = [...rawMaleData, ...rawFemaleData];
+            const sortedEntries = Array.from(headerDates.entries()).sort((a, b) => a[1] - b[1]);
+            const allHeaders = sortedEntries.map(e => e[0]);
             
-            // Intelligent date parsing
-            const allParsedHeaders = parseHeadersWithYearRollover(dateHeadersList);
-            const dateMap = {};
-            allParsedHeaders.forEach(item => { dateMap[item.header] = item.date; });
-
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Separate headers into "Future/Active" and "Historical"
-            const allHeadersSorted = allParsedHeaders.map(item => item.header);
-            const futureHeaders = allParsedHeaders
-                .filter(item => item.date >= today)
-                .map(item => item.header);
+            const futureHeaders = sortedEntries
+                .filter(e => e[1] >= today)
+                .map(e => e[0]);
 
-            const employeeMap = new Map();
-            combinedRawData.forEach(row => {
-                const empId = row['Emp Id'];
-                if (!empId) return;
-
-                const score = allHeadersSorted.reduce((acc, header) => {
-                    const shift = (row[header] || '').toString().trim().toUpperCase();
-                    return (shift && shift !== 'N/A') ? acc + 1 : acc;
-                }, 0);
-
-                const existingEntry = employeeMap.get(empId);
-                if (!existingEntry || score > existingEntry.score) {
-                    employeeMap.set(empId, { row: row, score: score });
-                }
-            });
-
-            const deduplicatedData = Array.from(employeeMap.values()).map(entry => entry.row);
-            const allDataSorted = deduplicatedData.sort(nameSorter);
-            
-            fullRosterData = {
-                all: allDataSorted,
-                male: allDataSorted.filter(row => row._source === 'male'),
-                female: allDataSorted.filter(row => row._source === 'female'),
-                headers: futureHeaders, // Only future dates for main table
-                allHeaders: allHeadersSorted, // All dates for roster selector
-                dateObjects: dateMap // For formatting exports
+            fullData = {
+                all: combined.filter(r => r['Employee Name'] || r['Emp Id']),
+                male: combined.filter(r => r._source === 'male'),
+                female: combined.filter(r => r._source === 'female'),
+                headers: futureHeaders.length ? futureHeaders : allHeaders,
+                allHeaders: allHeaders,
+                dateMap: Object.fromEntries(sortedEntries)
             };
 
-            if (allDataSorted.length > 0) {
-                document.getElementById('dashboard-title').innerHTML = `Shift-Sight <span class="text-slate-400 font-medium text-xl">(${allDataSorted.length} Employees)</span>`;
-                populateRosterDateSelect();
-                populateDateFilters(fullRosterData.headers);
-                switchTabView('all');
-                [legend, controlsSection, tabsSection, rosterDashboard].forEach(el => el.classList.remove('hidden'));
-            } else {
-                showError('No valid data found in "Hub MP" or "Processing MP" sheets.');
-            }
+            initUI();
         }
 
-        function populateRosterDateSelect() {
-            rosterDateSelect.innerHTML = '';
-            fullRosterData.allHeaders.forEach(header => {
-                const option = document.createElement('option');
-                option.value = header;
-                option.textContent = header;
-                rosterDateSelect.appendChild(option);
-            });
-
-            // Try to auto-select today
-            const today = new Date();
-            const day = today.getDate();
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const month = monthNames[today.getMonth()];
-            const todayHeader = `${day}-${month}`;
-            
-            const todayOption = Array.from(rosterDateSelect.options).find(opt => opt.value.toUpperCase() === todayHeader.toUpperCase());
-            if (todayOption) {
-                rosterDateSelect.value = todayOption.value;
-            } else if (rosterDateSelect.options.length > 0) {
-                 rosterDateSelect.selectedIndex = 0;
-            }
-            renderRosterDashboard(rosterDateSelect.value);
-        }
-
-        function renderRosterDashboard(selectedDateHeader) {
-            dailyShiftData = { A: { all: [], males: [], females: [] }, B: { all: [], males: [], females: [] }, C: { all: [], males: [], females: [] } };
-
-            if (!selectedDateHeader) {
-                 rosterContent.innerHTML = `<p class="text-slate-400 text-center col-span-3 py-8">Please select a date.</p>`;
-                 return;
+        function parseAnyDate(str, existingMap) {
+            // Check for ISO
+            let d = new Date(str);
+            if (!isNaN(d.getTime()) && str.includes("-")) {
+                if (d.getFullYear() < 2000) d.setFullYear(2026); // Fix for 2-digit years interpreted as 19xx
+                return d;
             }
 
-            fullRosterData.all.forEach(employee => {
-                const shift = (employee[selectedDateHeader] || '').toUpperCase();
-                if (dailyShiftData.hasOwnProperty(shift)) {
-                    const shiftGroup = dailyShiftData[shift];
-                    shiftGroup.all.push(employee);
-                    if (employee._source === 'male') shiftGroup.males.push(employee);
-                    else if (employee._source === 'female') shiftGroup.females.push(employee);
+            // Check for format like "15-Jan"
+            const match = str.match(/(\d+)[- \/]([a-zA-Z]+)/) || str.match(/([a-zA-Z]+)[- \/](\d+)/);
+            if (match) {
+                const monthMap = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+                let day, mStr;
+                if (!isNaN(match[1])) { day = parseInt(match[1]); mStr = match[2]; }
+                else { day = parseInt(match[2]); mStr = match[1]; }
+                
+                const monthIdx = monthMap[mStr.toLowerCase().substring(0,3)];
+                if (monthIdx !== undefined) {
+                    let year = 2026; // Current Base Year
+                    const dates = Array.from(existingMap.values());
+                    const lastDate = dates[dates.length - 1];
+                    
+                    if (lastDate && monthIdx < lastDate.getMonth()) year = lastDate.getFullYear() + 1;
+                    else if (lastDate) year = lastDate.getFullYear();
+                    
+                    return new Date(year, monthIdx, day);
                 }
-            });
-            
-            ['A', 'B', 'C'].forEach(shiftLetter => {
-                const summaryEl = document.getElementById(`shift-${shiftLetter.toLowerCase()}-summary`);
-                const shiftData = dailyShiftData[shiftLetter];
-                const m = shiftData.males.length;
-                const f = shiftData.females.length;
-                summaryEl.innerHTML = `Scheduled: 
-                    <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="all" data-filter-name="All">${m + f}</span> 
-                    (M: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="males" data-filter-name="Males">${m}</span>, 
-                     F: <span class="dashboard-filter-btn" data-shift="${shiftLetter}" data-filter="females" data-filter-name="Females">${f}</span>)`;
-            });
-            addDashboardFilterListeners();
-        }
-
-        function addDashboardFilterListeners() {
-            document.querySelectorAll('.dashboard-filter-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const { shift, filter, filterName } = e.target.dataset;
-                    const data = dailyShiftData[shift][filter];
-                    showModal(`Shift ${shift} - ${filterName} (${data.length})`, data);
-                });
-            });
-        }
-        
-        function switchTabView(view) {
-            currentView = view;
-            [allTab, maleTab, femaleTab].forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
-            resetFilters();
-        }
-
-        function getShiftInfo(shiftValue) {
-            const value = String(shiftValue).trim().toUpperCase();
-            switch (value) {
-                case 'A': return { class: 'bg-blue-500/20 text-blue-300', text: 'A' };
-                case 'B': return { class: 'bg-green-500/20 text-green-300', text: 'B' };
-                case 'C': return { class: 'bg-amber-500/20 text-amber-300', text: 'C' };
-                case 'W/OFF': case 'WOFF': case 'W-OFF': return { class: 'bg-slate-700 text-slate-300', text: 'W/OFF' };
-                case '': return { class: 'bg-red-500/20 text-red-300 pulse-critical', text: 'N/A' };
-                default: return { class: 'bg-yellow-500/20 text-yellow-300', text: shiftValue };
             }
+            return null;
         }
 
-        function renderTable(headers, data) {
-            if (!data || data.length === 0) {
-                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No data available for this view.</div>`;
-                 return;
-            }
-            if (headers.length === 0) {
-                 tableContainer.innerHTML = `<div class="text-center text-slate-500 py-20">No upcoming roster data to display. Use the Daily Roster above to view past dates.</div>`;
-                 return;
-            }
+        function initUI() {
+            populateSelect(elements.rosterSelect, fullData.allHeaders);
+            populateSelect(elements.startSelect, fullData.headers);
+            populateSelect(elements.endSelect, fullData.headers, true);
 
-            let tableHTML = `<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800"><tr>
-                <th class="sticky left-0 bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-16 border-r border-slate-700">S.No.</th>
-                <th class="sticky left-16 bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-48 border-r border-slate-700">Employee Name</th>
-                <th class="sticky left-[16rem] bg-slate-800 px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase w-32 border-r border-slate-700">Emp Id</th>`;
-            headers.forEach(h => { tableHTML += `<th class="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase">${h}</th>`; });
-            tableHTML += `</tr></thead><tbody class="bg-slate-900 divide-y divide-slate-800">`;
-            
-            data.forEach((row, index) => {
-                tableHTML += `<tr class="group hover:bg-slate-800 transition-colors">
-                                <td class="sticky left-0 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm text-slate-400 border-r border-slate-700">${index + 1}</td>
-                                <td class="sticky left-16 bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm font-medium text-slate-200 border-r border-slate-700">${row['Employee Name'] || 'N/A'}</td>
-                                <td class="sticky left-[16rem] bg-slate-900 group-hover:bg-slate-800 px-4 py-3 text-sm text-slate-400 border-r border-slate-700">${row['Emp Id'] || 'N/A'}</td>`;
-                headers.forEach(header => {
-                    const shiftInfo = getShiftInfo(row[header] || '');
-                    tableHTML += `<td class="px-4 py-3 text-center text-sm font-bold ${shiftInfo.class}">${shiftInfo.text}</td>`;
-                });
-                tableHTML += `</tr>`;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentView = e.target.dataset.view;
+                    renderTable(fullData.headers);
+                };
             });
-            tableContainer.innerHTML = tableHTML + `</tbody></table>`;
-        }
-        
-        function showModal(title, employees) {
-            modalTitle.textContent = title;
-            modalContent.innerHTML = ''; 
-            if (employees.length > 0) {
-                 const list = document.createElement('ul');
-                 list.className = 'space-y-2';
-                 employees.forEach(emp => {
-                     const li = document.createElement('li');
-                     li.className = 'flex justify-between items-center bg-slate-700/50 p-2 rounded-md';
-                     li.innerHTML = `<span class="text-slate-300 truncate pr-2">${emp['Employee Name']}</span><span class="text-slate-400 font-mono text-xs">${emp['Emp Id']}</span>`;
-                     list.appendChild(li);
-                 });
-                 modalContent.appendChild(list);
-            } else {
-                modalContent.innerHTML = '<p class="text-slate-400 text-center py-4">No employees in this group.</p>';
-            }
-            modal.classList.remove('hidden');
-        }
 
-        function hideModal() { modal.classList.add('hidden'); }
-        function showError(message) { tableContainer.innerHTML = `<div class="text-center text-red-400 py-20 px-4">${message}</div>`; }
-        
-        function populateDateFilters(dateHeaders) {
-            startDateSelect.innerHTML = ''; endDateSelect.innerHTML = '';
-            if (dateHeaders.length === 0) return;
-            dateHeaders.forEach(date => {
-                startDateSelect.appendChild(new Option(date, date));
-                endDateSelect.appendChild(new Option(date, date));
-            });
-            if (endDateSelect.options.length > 0) endDateSelect.selectedIndex = endDateSelect.options.length - 1;
-        }
-
-        function applyDateFilter() {
-            const allHeaders = fullRosterData.headers;
-            const startIndex = allHeaders.indexOf(startDateSelect.value);
-            const endIndex = allHeaders.indexOf(endDateSelect.value);
-            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                filterError.textContent = "Invalid date range."; return;
-            }
-            filterError.textContent = "";
-            renderTable(allHeaders.slice(startIndex, endIndex + 1), fullRosterData[currentView]);
-        }
-
-        function resetFilters() {
-            if (startDateSelect.options.length > 0) startDateSelect.selectedIndex = 0;
-            if (endDateSelect.options.length > 0) endDateSelect.selectedIndex = endDateSelect.options.length - 1;
-            renderTable(fullRosterData.headers, fullRosterData[currentView]);
-        }
-
-        function exportRosterToCSV() {
-            const allHeaders = fullRosterData.headers;
-            const startIndex = allHeaders.indexOf(startDateSelect.value);
-            const endIndex = allHeaders.indexOf(endDateSelect.value);
-            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return;
-
-            const headersToExport = allHeaders.slice(startIndex, endIndex + 1);
-            const dataToExport = fullRosterData[currentView];
-            const shiftMap = { 'A': '07:00 - 16:00', 'B': '13:00 - 22:00', 'C': '22:00 - 07:00', 'W/OFF': 'W/OFF', 'WOFF': 'W/OFF', 'W-OFF': 'W/OFF' };
-
-            const getFormattedDate = (header) => {
-                const date = fullRosterData.dateObjects[header];
-                if (!date) return header;
-                const d = String(date.getDate());
-                const mArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const m = mArr[date.getMonth()];
-                const y = date.getFullYear().toString().slice(-2);
-                return `${d}-${m}-${y}`;
+            document.getElementById('filter-btn').onclick = () => {
+                const start = fullData.headers.indexOf(elements.startSelect.value);
+                const end = fullData.headers.indexOf(elements.endSelect.value);
+                if (start <= end) renderTable(fullData.headers.slice(start, end + 1));
             };
 
-            const csvRows = [['Username', 'Shift Name', 'From', 'To']];
-            dataToExport.forEach(row => {
-                const empId = row['Emp Id'];
-                if (!empId) return;
+            document.getElementById('export-btn').onclick = exportCSV;
+            elements.rosterSelect.onchange = (e) => renderRosterSummary(e.target.value);
+            document.getElementById('modal-close-btn').onclick = () => elements.modal.classList.add('hidden');
 
-                let currentShift = null, shiftStartDate = null;
-                headersToExport.forEach((header, index) => {
-                    const val = (row[header] || '').toString().trim().toUpperCase();
-                    if (currentShift !== val) {
-                        if (currentShift && shiftMap[currentShift]) {
-                            csvRows.push([empId, shiftMap[currentShift], getFormattedDate(shiftStartDate), getFormattedDate(headersToExport[index - 1])]);
-                        }
-                        currentShift = shiftMap.hasOwnProperty(val) ? val : null;
-                        shiftStartDate = currentShift ? header : null;
+            renderRosterSummary(elements.rosterSelect.value);
+            renderTable(fullData.headers);
+            
+            ['legend', 'controls-section', 'tabs-section', 'roster-dashboard'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('hidden');
+            });
+        }
+
+        function populateSelect(el, items, last = false) {
+            el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
+            if (last) el.selectedIndex = Math.max(0, items.length - 1);
+        }
+
+        function renderTable(headers) {
+            const data = fullData[currentView];
+            if (!headers.length || !data.length) {
+                elements.table.innerHTML = '<div class="p-10 text-center text-slate-500">No matching roster data found.</div>';
+                return;
+            }
+            let html = `<table class="w-full text-left border-collapse"><thead class="bg-slate-800 sticky top-0"><tr>
+                <th class="p-3 text-[10px] uppercase border-b border-slate-700 sticky left-0 bg-slate-800 z-10 w-12">#</th>
+                <th class="p-3 text-[10px] uppercase border-b border-slate-700 sticky left-12 bg-slate-800 z-10 w-48">Employee</th>
+                <th class="p-3 text-[10px] uppercase border-b border-slate-700 sticky left-60 bg-slate-800 z-10 w-24">ID</th>`;
+            headers.forEach(h => html += `<th class="p-3 text-[10px] uppercase text-center border-b border-slate-700 min-w-[70px]">${h}</th>`);
+            html += `</tr></thead><tbody>`;
+            
+            data.forEach((row, i) => {
+                html += `<tr class="hover:bg-slate-800/40">
+                    <td class="p-3 text-xs border-b border-slate-800 sticky left-0 bg-slate-900 z-10">${i+1}</td>
+                    <td class="p-3 text-xs font-semibold border-b border-slate-800 sticky left-12 bg-slate-900 z-10 truncate">${row['Employee Name'] || 'Unknown'}</td>
+                    <td class="p-3 text-xs border-b border-slate-800 sticky left-60 bg-slate-900 z-10 font-mono">${row['Emp Id'] || '-'}</td>`;
+                headers.forEach(h => {
+                    const shift = String(row[h] || '').toUpperCase();
+                    const color = shift === 'A' ? 'text-blue-400' : shift === 'B' ? 'text-green-400' : shift === 'C' ? 'text-amber-400' : 'text-slate-500';
+                    html += `<td class="p-3 text-xs text-center border-b border-slate-800 font-black ${color}">${shift || '-'}</td>`;
+                });
+                html += `</tr>`;
+            });
+            elements.table.innerHTML = html + `</tbody></table>`;
+        }
+
+        function renderRosterSummary(date) {
+            const counts = { A: [], B: [], C: [] };
+            fullData.all.forEach(emp => {
+                const shift = String(emp[date] || '').toUpperCase();
+                if (counts[shift]) counts[shift].push(emp);
+            });
+            ['A', 'B', 'C'].forEach(s => {
+                const m = counts[s].filter(e => e._source === 'male').length;
+                const f = counts[s].filter(e => e._source === 'female').length;
+                document.getElementById(`shift-${s.toLowerCase()}-summary`).innerHTML = `
+                    <div class="mb-1"><span class="dashboard-filter-btn text-white text-lg" onclick="openDetails('${s}', 'All')">${counts[s].length} Total</span></div>
+                    <div class="flex gap-3 text-xs opacity-70">
+                        <span class="dashboard-filter-btn" onclick="openDetails('${s}', 'male')">M: ${m}</span>
+                        <span class="dashboard-filter-btn" onclick="openDetails('${s}', 'female')">F: ${f}</span>
+                    </div>`;
+            });
+        }
+
+        window.openDetails = (shift, filter) => {
+            const date = elements.rosterSelect.value;
+            const list = fullData.all.filter(e => String(e[date] || '').toUpperCase() === shift && (filter === 'All' || e._source === filter));
+            elements.modalTitle.textContent = `Shift ${shift} - ${date}`;
+            elements.modalContent.innerHTML = `<ul class="space-y-1">` + list.map(e => `<li class="flex justify-between text-sm py-2 px-3 bg-slate-700/30 rounded"><span>${e['Employee Name']}</span><span class="opacity-50 font-mono text-xs">${e['Emp Id']}</span></li>`).join('') + `</ul>`;
+            elements.modal.classList.remove('hidden');
+        };
+
+        function exportCSV() {
+            const headers = fullData.headers;
+            const rows = [['Employee ID', 'Shift Name', 'Start Date', 'End Date']];
+            const shiftMap = { A: '07:00-16:00', B: '13:00-22:00', C: '22:00-07:00' };
+
+            fullData[currentView].forEach(row => {
+                let cur = null, start = null;
+                headers.forEach((h, i) => {
+                    const s = String(row[h] || '').toUpperCase();
+                    if (s !== cur) {
+                        if (cur && shiftMap[cur]) rows.push([row['Emp Id'], shiftMap[cur], fmt(start), fmt(headers[i-1])]);
+                        cur = s; start = h;
                     }
-                    if (index === headersToExport.length - 1 && currentShift && shiftStartDate) {
-                        csvRows.push([empId, shiftMap[currentShift], getFormattedDate(shiftStartDate), getFormattedDate(header)]);
-                    }
+                    if (i === headers.length - 1 && cur && shiftMap[cur]) rows.push([row['Emp Id'], shiftMap[cur], fmt(start), fmt(h)]);
                 });
             });
 
-            const blob = new Blob([csvRows.map(r => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'roster_summary.csv';
+            link.download = `Export_${currentView}.csv`;
             link.click();
+        }
+
+        function fmt(h) {
+            const d = fullData.dateMap[h];
+            if (!d) return h;
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
         }
     </script>
 </body>
