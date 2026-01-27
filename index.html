@@ -63,15 +63,15 @@
                 </div>
                 <div id="roster-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-blue-500/30">
-                        <h3 class="font-bold text-blue-300 mb-2">Shift A (07:00-16:00)</h3>
+                        <h3 class="font-bold text-blue-300 mb-2">Shift A (07:00 - 16:00)</h3>
                         <div id="shift-a-summary" class="text-slate-400 text-sm"></div>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-green-500/30">
-                         <h3 class="font-bold text-green-300 mb-2">Shift B (13:00-22:00)</h3>
+                         <h3 class="font-bold text-green-300 mb-2">Shift B (13:00 - 22:00)</h3>
                          <div id="shift-b-summary" class="text-slate-400 text-sm"></div>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-amber-500/30">
-                         <h3 class="font-bold text-amber-300 mb-2">Shift C (22:00-07:00)</h3>
+                         <h3 class="font-bold text-amber-300 mb-2">Shift C (22:00 - 07:00)</h3>
                          <div id="shift-c-summary" class="text-slate-400 text-sm"></div>
                     </div>
                 </div>
@@ -79,9 +79,9 @@
 
             <div id="legend" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                  <div class="flex flex-wrap gap-4 items-center text-[11px] font-bold">
-                     <span class="px-2 py-1 rounded bg-blue-500/20 text-blue-400">A: 07:00-16:00</span>
-                     <span class="px-2 py-1 rounded bg-green-500/20 text-green-400">B: 13:00-22:00</span>
-                     <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-400">C: 22:00-07:00</span>
+                     <span class="px-2 py-1 rounded bg-blue-500/20 text-blue-400">A: 07:00 - 16:00</span>
+                     <span class="px-2 py-1 rounded bg-green-500/20 text-green-400">B: 13:00 - 22:00</span>
+                     <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-400">C: 22:00 - 07:00</span>
                      <span class="px-2 py-1 rounded bg-slate-700 text-slate-300">W/O: Week-Off</span>
                  </div>
             </div>
@@ -194,11 +194,9 @@
                 if (source) {
                     const ws = wb.Sheets[sheetName];
                     const headerRowIndex = findHeaderRow(ws);
-                    // Use range to start at header row
                     const rawRows = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
                     
                     rawRows.forEach(rawRow => {
-                        // Clean keys: trim and ensure they are strings
                         const row = {};
                         Object.keys(rawRow).forEach(k => {
                             const cleanKey = String(k).trim();
@@ -207,7 +205,6 @@
 
                         row._source = source;
                         
-                        // Parse dates from all column headers
                         Object.keys(row).forEach(key => {
                             if (key === "_source") return;
                             const dateObj = parseAnyDate(key, headerDates);
@@ -220,7 +217,6 @@
                 }
             });
 
-            // Clean combined data - must have name or ID
             const validData = combined.filter(r => (r['Employee Name'] && String(r['Employee Name']).trim() !== "") || (r['Emp Id'] && String(r['Emp Id']).trim() !== ""));
 
             const sortedEntries = Array.from(headerDates.entries()).sort((a, b) => a[1] - b[1]);
@@ -243,7 +239,7 @@
             };
 
             if (fullData.all.length === 0) {
-                document.getElementById('placeholder').innerText = "No data found in 'Hub MP' or 'Processing MP' sheets. Check column headers.";
+                document.getElementById('placeholder').innerText = "No data found. Check sheet names and column headers.";
                 return;
             }
 
@@ -251,21 +247,16 @@
         }
 
         function parseAnyDate(str, existingMap) {
-            // Check if it's already a Date object from SheetJS
             if (str instanceof Date) return str;
-            
             const s = String(str).trim();
             if (!s || s === "undefined") return null;
 
-            // 1. Check for ISO or valid date string (e.g. "2026-01-15")
             let d = new Date(s);
             if (!isNaN(d.getTime()) && (s.includes("-") || s.includes("/") || !isNaN(Date.parse(s)))) {
-                // If it's a very old date (like 1900-01-01), skip it
-                if (d.getFullYear() < 2000) d.setFullYear(2026);
+                if (d.getFullYear() < 2020) d.setFullYear(2026);
                 return d;
             }
 
-            // 2. Check for "15-Jan" or "Jan-15" format
             const match = s.match(/(\d+)[- \/]([a-zA-Z]+)/) || s.match(/([a-zA-Z]+)[- \/](\d+)/);
             if (match) {
                 const monthMap = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
@@ -278,10 +269,8 @@
                     let year = 2026;
                     const dates = Array.from(existingMap.values());
                     const lastDate = dates[dates.length - 1];
-                    // Detect year rollover Dec -> Jan
                     if (lastDate && mIdx < lastDate.getMonth()) year = lastDate.getFullYear() + 1;
                     else if (lastDate) year = lastDate.getFullYear();
-                    
                     return new Date(year, mIdx, day);
                 }
             }
@@ -329,7 +318,7 @@
         function renderTable(headers) {
             const data = fullData[currentView];
             if (!headers.length || !data.length) {
-                elements.table.innerHTML = '<div class="p-10 text-center text-slate-500">No matching roster data found for this range.</div>';
+                elements.table.innerHTML = '<div class="p-10 text-center text-slate-500">No matching roster data found.</div>';
                 return;
             }
             let html = `<table class="w-full text-left border-collapse"><thead class="bg-slate-800 sticky top-0"><tr>
@@ -363,6 +352,7 @@
             ['A', 'B', 'C'].forEach(s => {
                 const m = counts[s].filter(e => e._source === 'male').length;
                 const f = counts[s].filter(e => e._source === 'female').length;
+                const label = s === 'A' ? '07:00 - 16:00' : s === 'B' ? '13:00 - 22:00' : '22:00 - 07:00';
                 document.getElementById(`shift-${s.toLowerCase()}-summary`).innerHTML = `
                     <div class="mb-1"><span class="dashboard-filter-btn text-white text-lg" onclick="openDetails('${s}', 'All')">${counts[s].length} Total</span></div>
                     <div class="flex gap-3 text-xs opacity-70">
@@ -382,25 +372,41 @@
 
         function exportCSV() {
             const headers = fullData.headers;
-            const rows = [['Employee ID', 'Shift Name', 'Start Date', 'End Date']];
-            const shiftMap = { A: '07:00-16:00', B: '13:00-22:00', C: '22:00-07:00' };
+            // Headers strictly as requested
+            const rows = [['Username', 'Shift Name', 'From', 'To']];
+            
+            // Mapping strictly to requested shift name titles
+            const shiftMap = { 
+                A: '07:00 - 16:00', 
+                B: '13:00 - 22:00', 
+                C: '22:00 - 07:00' 
+            };
 
             fullData[currentView].forEach(row => {
                 let cur = null, start = null;
+                const empId = String(row['Emp Id'] || '').trim();
+                if (!empId) return;
+
                 headers.forEach((h, i) => {
                     const s = String(row[h] || '').trim().toUpperCase();
                     if (s !== cur) {
-                        if (cur && shiftMap[cur]) rows.push([row['Emp Id'], shiftMap[cur], fmt(start), fmt(headers[i-1])]);
-                        cur = s; start = h;
+                        if (cur && shiftMap[cur]) {
+                            rows.push([empId, shiftMap[cur], fmt(start), fmt(headers[i-1])]);
+                        }
+                        cur = shiftMap[s] ? s : null;
+                        start = h;
                     }
-                    if (i === headers.length - 1 && cur && shiftMap[cur]) rows.push([row['Emp Id'], shiftMap[cur], fmt(start), fmt(h)]);
+                    if (i === headers.length - 1 && cur && shiftMap[cur]) {
+                        rows.push([empId, shiftMap[cur], fmt(start), fmt(h)]);
+                    }
                 });
             });
 
-            const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
+            const csvContent = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Export_${currentView}.csv`;
+            link.download = `ShiftSight_Export_${currentView}.csv`;
             link.click();
         }
 
@@ -408,7 +414,11 @@
             const d = fullData.dateMap[h];
             if (!d) return h;
             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+            const day = String(d.getDate()).padStart(2, '0');
+            const mon = months[d.getMonth()];
+            // Ensure 2-digit year is correct (e.g., 2026 -> 26)
+            const year = String(d.getFullYear()).slice(-2);
+            return `${day}-${mon}-${year}`;
         }
     </script>
 </body>
